@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Programa mensual — Planificador VMC</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    /* Dos semanas por hoja (como tus imágenes) */
+    .month-controls{ display:flex; gap:10px; align-items:end; flex-wrap:wrap; }
+    .week-card{ border-top:3px solid #222; padding-top:10px; margin-top:14px; }
+    .week-top{ display:flex; justify-content:space-between; gap:16px; }
+    .week-right{ min-width:280px; text-align:right; }
+    .label{ color:#666; font-size:12px; margin-right:6px; }
+    .val{ font-weight:700; }
+    .section{ margin-top:10px; }
+    .sec-title{ font-weight:800; letter-spacing:.4px; margin:10px 0 6px; padding:6px 10px; color:white; }
+    .sec-gray{ background:#6b6f73; }
+    .sec-gold{ background:#b07a1f; }
+    .sec-red{ background:#8b1c1c; }
+    .rows .r{ display:flex; gap:10px; align-items:flex-start; margin:3px 0; }
+    .time{ width:54px; color:#444; font-variant-numeric: tabular-nums; }
+    .num{ width:22px; text-align:right; color:#1b5e20; font-weight:800; }
+    .txt{ flex:1; }
+    .assign{ width:300px; text-align:right; font-weight:700; }
+    .assign .small{ font-weight:500; color:#666; font-size:12px; }
+    .pagebreak{ break-after: page; page-break-after: always; }
+    @media print{
+      .no-print{ display:none !important; }
+      body{ background:white; }
+      .container{ max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar no-print">
+    <div class="container nav">
+      <div class="brand">
+        <span id="appName">Planificador VMC</span>
+        <span class="badge" id="appVersion"></span>
+        <span class="badge" id="authStatus">—</span>
+      </div>
+      <div class="navlinks">
+        <a href="index.html">Inicio</a>
+        <a href="semana.html">Semana</a>
+        <a href="mensual.html"><b>Programa mensual</b></a>
+        <a href="personas.html">Personas</a>
+        <a href="tablero.html">Tablero</a>
+        <a href="settings.html">Configuración</a>
+        <a href="login.html">Login</a>
+        <button id="btnLogout" class="ghost" style="display:none">Salir</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card no-print">
+      <h2>Programa mensual (entre semana)</h2>
+      <div class="month-controls">
+        <div>
+          <div class="small">Mes</div>
+          <input id="month" type="month" />
+        </div>
+        <div>
+          <button id="btnLoad">Cargar</button>
+          <button id="btnPrint" class="secondary">Imprimir</button>
+        </div>
+        <div class="small" id="hint">Cargá las semanas desde <b>Semana</b> (guardar semana + asignaciones). Luego acá se arma el mensual.</div>
+      </div>
+      <div id="msg" class="notice" style="display:none; margin-top:10px"></div>
+    </div>
+
+    <div id="wrap"></div>
+  </div>
+
+  <script type="module" src="js/mensual.js"></script>
+</body>
+</html>

@@ -4,6 +4,144 @@ import { loadPeople, savePerson, deletePerson } from "./data.js";
 
 mountHeader();
 
+// Lista inicial (podés ajustarla desde esta misma página)
+const DEFAULT_PEOPLE_VILLA_FIAD = [
+  {
+    "name": "Marcelo Palavecino",
+    "sex": "H",
+    "role": "Anciano",
+    "active": true,
+    "approved": true
+  },
+  {
+    "name": "Sergio Saldaña",
+    "sex": "H",
+    "role": "Anciano",
+    "active": true,
+    "approved": true
+  },
+  {
+    "name": "Leonardo Araya",
+    "sex": "H",
+    "role": "Anciano",
+    "active": true,
+    "approved": true
+  },
+  {
+    "name": "Luis Navarro",
+    "sex": "H",
+    "role": "Anciano",
+    "active": true,
+    "approved": true
+  },
+  {
+    "name": "Marcelo Rodriguez",
+    "sex": "H",
+    "role": "Siervo ministerial",
+    "active": true,
+    "approved": true
+  },
+  {
+    "name": "Eduardo Rivadeneira",
+    "sex": "H",
+    "role": "Siervo ministerial",
+    "active": true,
+    "approved": true
+  },
+  {
+    "name": "Hugo García",
+    "sex": "H",
+    "role": "Siervo ministerial",
+    "active": true,
+    "approved": true
+  },
+  {
+    "name": "Omar Santucho",
+    "sex": "H",
+    "role": "Siervo ministerial",
+    "active": true,
+    "approved": true
+  },
+  {
+    "name": "Epifanio Pedraza",
+    "sex": "H",
+    "role": "Siervo ministerial",
+    "active": true,
+    "approved": true
+  },
+  {
+    "name": "Brian Rivadeneira",
+    "sex": "H",
+    "role": "",
+    "active": true,
+    "approved": false
+  },
+  {
+    "name": "Brian Torres",
+    "sex": "H",
+    "role": "",
+    "active": true,
+    "approved": false
+  },
+  {
+    "name": "Martin Zerda Jr",
+    "sex": "H",
+    "role": "",
+    "active": true,
+    "approved": false
+  },
+  {
+    "name": "Isaías Schell",
+    "sex": "H",
+    "role": "",
+    "active": true,
+    "approved": false
+  },
+  {
+    "name": "David Salica",
+    "sex": "H",
+    "role": "",
+    "active": true,
+    "approved": false
+  },
+  {
+    "name": "Emanuel Salica",
+    "sex": "H",
+    "role": "",
+    "active": true,
+    "approved": false
+  },
+  {
+    "name": "Martin Zerda",
+    "sex": "H",
+    "role": "",
+    "active": true,
+    "approved": false
+  },
+  {
+    "name": "Sergio Lazarte",
+    "sex": "H",
+    "role": "",
+    "active": true,
+    "approved": false
+  },
+  {
+    "name": "Roberto Lazarte",
+    "sex": "H",
+    "role": "",
+    "active": true,
+    "approved": false
+  },
+  {
+    "name": "Rodolfo Santucho",
+    "sex": "H",
+    "role": "",
+    "active": true,
+    "approved": false
+  }
+];
+
+
 const tbl = qs("#tblPeople tbody");
 const form = qs("#personForm");
 let people = [];
@@ -100,3 +238,25 @@ form.addEventListener("submit", async (e)=>{
 qs("#search").addEventListener("input", debounce(render, 100));
 
 refresh();
+
+
+async function seedDefaultPeople(){
+  const existing = await loadPeople();
+  const existingNames = new Set(existing.map(p=>(p.name||"").toLowerCase()));
+  let added=0;
+  for(const p of DEFAULT_PEOPLE_VILLA_FIAD){
+    if(existingNames.has((p.name||"").toLowerCase())) continue;
+    await savePerson(p);
+    added++;
+  }
+  await refresh();
+  showMsg(added ? ("Lista inicial cargada. Agregados: " + added) : "Ya estaban cargados (no agregué duplicados).", "ok");
+}
+
+const btnSeed = document.getElementById("btnSeed");
+if(btnSeed){
+  btnSeed.addEventListener("click", async ()=>{
+    if(!confirm("Esto cargará una lista inicial de hermanos. Podés editar luego. ¿Continuar?")) return;
+    await seedDefaultPeople();
+  });
+}
