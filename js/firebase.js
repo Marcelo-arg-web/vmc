@@ -11,8 +11,20 @@ export { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc,
 
 let _app = null, _auth = null, _db = null;
 
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDFyo49uQEhRHVTxK9LPmG1AcwgeIZYphk",
+  authDomain: "vmc2026-3b10b.firebaseapp.com",
+  projectId: "vmc2026-3b10b",
+  storageBucket: "vmc2026-3b10b.appspot.com",
+  messagingSenderId: "88307042345",
+  appId: "1:88307042345:web:3530ac98c4a6aaa3767438",
+  measurementId: "G-PY1EZJW2HE"
+};
+
+
 export function getFirebaseConfig(){
-  return Storage.get("firebaseConfig", null);
+  // Usa lo guardado en Configuración si existe; si no, usa la configuración por defecto.
+  return Storage.get("firebaseConfig", DEFAULT_FIREBASE_CONFIG);
 }
 
 export function hasFirebaseConfig(){
