@@ -56,53 +56,7 @@
         </div>
       </div>
 
-      <div class="row" style="margin-top:10px">
-        <label class="row"><input id="student" type="checkbox"> <span>Estudiante</span></label>
-        <label class="row"><input id="approved" type="checkbox"> <span>Hermano aprobado (oración/lectura)</span></label>
-        <label class="row"><input id="spouseOnly" type="checkbox"> <span>Solo con familiar/cónyuge</span></label>
-        <label class="row"><input id="active" type="checkbox" checked> <span>Activo</span></label>
-      </div>
-
-      
-      <div class="small" style="margin-top:10px">Puede hacer</div>
-      <div class="row" style="margin-top:6px; gap:14px; flex-wrap:wrap">
-        <label class="row"><input id="puedePresidir" type="checkbox"> <span>Presidir (Presidente)</span></label>
-        <label class="row"><input id="puedeOracion" type="checkbox"> <span>Oraciones</span></label>
-        <label class="row"><input id="puedeTesoros" type="checkbox"> <span>Tesoros</span></label>
-        <label class="row"><input id="puedePerlas" type="checkbox"> <span>Perlas</span></label>
-      </div>
-
-      <div class="small" style="margin-top:10px">Notas</div>
-      <textarea id="notes" placeholder="Restricciones, observaciones..."></textarea>
-
-      <div class="row" style="margin-top:10px">
-        <button type="submit" class="success">Guardar</button>
-        <button type="button" id="btnCancel" class="ghost" style="display:none">Cancelar</button>
-      </div>
-    </form>
-  </div>
-
-  <div class="card">
-    <div class="row space">
-      <h2>Lista</h2>
-      <div id="status" class="small">—</div>
-    </div>
-    <input id="search" list="datalistPeople" placeholder="Buscar por nombre o apellido..." style="width:100%; margin:10px 0" />
-<datalist id="datalistPeople"></datalist>
-<div class="row" style="gap:8px; flex-wrap:wrap; margin:10px 0">
-  <button id="btnPrev" class="btn">Anterior</button>
-  <button id="btnNext" class="btn">Siguiente</button>
-  <button id="btnToggleList" class="btn">Mostrar/ocultar lista</button>
-  <span class="small" id="navInfo"></span>
-</div>
-
-    <div class="row" style="gap:8px; flex-wrap:wrap; margin:10px 0">
-      <button id="btnSeedAll" class="btn">Cargar lista completa (una sola vez)</button>
-      <button id="btnRepairSeed" class="btn">Reparar (borrar vacíos y recargar)</button>
-      <span class="small" id="seedMsg"></span>
-    </div>
-
-    <table class="table" id="tblPeople">
+      <table class="table" id="tblPeople">
       <thead>
         <tr>
           <th>Nombre</th><th>Sexo</th><th>Rol</th><th>Est.</th><th>Aprob.</th><th>Activo</th><th>Acciones</th>
