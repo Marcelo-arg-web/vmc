@@ -111,11 +111,15 @@ async function seedAll(){
     if(existing.has(key)) continue;
 
     await savePerson({
-      nombre,
-      sexo: "",
-      rol: "publicador",
-      estado: "activo",
-      aprobado: false
+      name: nombre,
+      sex: "",
+      role: "publicador",
+      student: true,
+      active: true,
+      approved: false,
+      spouseOnly: false,
+      can: {},
+      notes: ""
     });
 
     addedCount++;
@@ -237,3 +241,30 @@ form.addEventListener("submit", async (e)=>{
 qs("#search").addEventListener("input", debounce(render, 100));
 
 refresh();
+
+async function repairSeed(){
+  const msgEl = qs("#seedMsg");
+  msgEl.textContent = "Reparando (borrando vacíos)...";
+
+  const current = await loadPeople();
+  const empty = current.filter(p => !((p.name || "").trim()));
+  for(const p of empty){
+    await deletePerson(p.id);
+  }
+
+  msgEl.textContent = `Borrados vacíos: ${empty.length}. Ahora recargando lista...`;
+  await seedAll();
+}
+
+const btnRepair = qs("#btnRepairSeed");
+if(btnRepair){
+  btnRepair.addEventListener("click", async ()=>{
+    if(!confirm("Esto borra registros de personas SIN nombre y vuelve a cargar la lista completa. ¿Continuar?")) return;
+    try{
+      await repairSeed();
+    }catch(e){
+      console.error(e);
+      qs("#seedMsg").textContent = "Error al reparar: " + (e?.message || e);
+    }
+  });
+}
