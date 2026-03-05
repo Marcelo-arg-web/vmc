@@ -87,7 +87,14 @@
       <h2>Lista</h2>
       <div id="status" class="small">—</div>
     </div>
-    <input id="search" placeholder="Buscar..." style="width:100%; margin:10px 0" />
+    <input id="search" list="datalistPeople" placeholder="Buscar por nombre o apellido..." style="width:100%; margin:10px 0" />
+<datalist id="datalistPeople"></datalist>
+<div class="row" style="gap:8px; flex-wrap:wrap; margin:10px 0">
+  <button id="btnPrev" class="btn">Anterior</button>
+  <button id="btnNext" class="btn">Siguiente</button>
+  <button id="btnToggleList" class="btn">Mostrar/ocultar lista</button>
+  <span class="small" id="navInfo"></span>
+</div>
 
     <div class="row" style="gap:8px; flex-wrap:wrap; margin:10px 0">
       <button id="btnSeedAll" class="btn">Cargar lista completa (una sola vez)</button>

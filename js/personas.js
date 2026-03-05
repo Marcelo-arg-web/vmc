@@ -149,6 +149,18 @@ async function seedAll(){
   msgEl.textContent = "Listo. Agregados: " + addedCount + ". (Los existentes no se duplicaron)";
   people = await loadPeople();
   render();
+  updateDatalist();
+  updateNavInfo();
+  updateDatalist();
+  updateNavInfo();
+  const btnPrev = qs('#btnPrev'); if(btnPrev) btnPrev.addEventListener('click', (e)=>{e.preventDefault(); goPrev();});
+  const btnNext = qs('#btnNext'); if(btnNext) btnNext.addEventListener('click', (e)=>{e.preventDefault(); goNext();});
+  const btnToggle = qs('#btnToggleList'); if(btnToggle) btnToggle.addEventListener('click', (e)=>{e.preventDefault(); toggleList();});
+  const search = qs('#search'); if(search){
+    search.addEventListener('input', ()=>{ currentIndex = 0; updateNavInfo(); });
+    search.addEventListener('change', ()=>{ currentIndex = 0; const list = filteredPeople(); if(list[0]) fillForm(list[0]); updateNavInfo(); });
+  }
+
 }
 
 const btnSeed = qs("#btnSeedAll");
@@ -168,6 +180,72 @@ if(btnSeed){
 const tbl = qs("#tblPeople tbody");
 const form = qs("#personForm");
 let people = [];
+let currentIndex = -1;
+
+function filteredPeople(){
+  const q = (qs("#search")?.value || "").trim().toLowerCase();
+  if(!q) return people.slice().sort((a,b)=> (a.name||"").localeCompare(b.name||"", "es", {sensitivity:"base"}));
+  return people
+    .filter(p => ((p.name||"").toLowerCase().includes(q)))
+    .sort((a,b)=> (a.name||"").localeCompare(b.name||"", "es", {sensitivity:"base"}));
+}
+
+function updateDatalist(){
+  const dl = qs("#datalistPeople");
+  if(!dl) return;
+  const list = people.slice().sort((a,b)=> (a.name||"").localeCompare(b.name||"", "es", {sensitivity:"base"}));
+  dl.innerHTML = list.map(p=> `<option value="${p.name}"></option>`).join("");
+}
+
+function setCurrentById(id){
+  const list = filteredPeople();
+  const idx = list.findIndex(p=>p.id===id);
+  if(idx>=0){
+    currentIndex = idx;
+    fillForm(list[idx]);
+    updateNavInfo();
+  }
+}
+
+function updateNavInfo(){
+  const info = qs("#navInfo");
+  if(!info) return;
+  const list = filteredPeople();
+  if(list.length===0){
+    info.textContent = "0 resultados";
+    return;
+  }
+  if(currentIndex<0) currentIndex=0;
+  if(currentIndex>=list.length) currentIndex=list.length-1;
+  const p = list[currentIndex];
+  info.textContent = `Mostrando ${currentIndex+1} de ${list.length}: ${p.name}`;
+}
+
+function goPrev(){
+  const list = filteredPeople();
+  if(list.length===0) return;
+  if(currentIndex<0) currentIndex=0;
+  currentIndex = (currentIndex-1 + list.length) % list.length;
+  fillForm(list[currentIndex]);
+  updateNavInfo();
+}
+
+function goNext(){
+  const list = filteredPeople();
+  if(list.length===0) return;
+  if(currentIndex<0) currentIndex=0;
+  currentIndex = (currentIndex+1) % list.length;
+  fillForm(list[currentIndex]);
+  updateNavInfo();
+}
+
+function toggleList(){
+  const el = qs("#tableBox") || qs("#table");
+  if(!el) return;
+  const show = (el.style.display === "none" || !el.style.display);
+  el.style.display = show ? "" : "none";
+}
+
 let editingId = null;
 
 function render(){
@@ -256,6 +334,13 @@ form.addEventListener("submit", async (e)=>{
     },
     notes: qs("#notes").value
   };
+  // Evitar duplicados (mismo nombre normalizado)
+  const key = normalizeName(person.name).toLowerCase();
+  const dup = people.find(x => x.id !== person.id && normalizeName(x.name).toLowerCase() === key);
+  if(dup){
+    alert('Ya existe un nombre igual o muy parecido: ' + dup.name + '.\nSi es la misma persona, editá esa.');
+    return;
+  }
   await savePerson(person);
   editingId=null;
   qs("#formTitle").textContent = "Agregar persona";
