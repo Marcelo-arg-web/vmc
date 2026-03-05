@@ -4,142 +4,141 @@ import { loadPeople, savePerson, deletePerson } from "./data.js";
 
 mountHeader();
 
-// Lista inicial (podés ajustarla desde esta misma página)
-const DEFAULT_PEOPLE_VILLA_FIAD = [
-  {
-    "name": "Marcelo Palavecino",
-    "sex": "H",
-    "role": "Anciano",
-    "active": true,
-    "approved": true
-  },
-  {
-    "name": "Sergio Saldaña",
-    "sex": "H",
-    "role": "Anciano",
-    "active": true,
-    "approved": true
-  },
-  {
-    "name": "Leonardo Araya",
-    "sex": "H",
-    "role": "Anciano",
-    "active": true,
-    "approved": true
-  },
-  {
-    "name": "Luis Navarro",
-    "sex": "H",
-    "role": "Anciano",
-    "active": true,
-    "approved": true
-  },
-  {
-    "name": "Marcelo Rodriguez",
-    "sex": "H",
-    "role": "Siervo ministerial",
-    "active": true,
-    "approved": true
-  },
-  {
-    "name": "Eduardo Rivadeneira",
-    "sex": "H",
-    "role": "Siervo ministerial",
-    "active": true,
-    "approved": true
-  },
-  {
-    "name": "Hugo García",
-    "sex": "H",
-    "role": "Siervo ministerial",
-    "active": true,
-    "approved": true
-  },
-  {
-    "name": "Omar Santucho",
-    "sex": "H",
-    "role": "Siervo ministerial",
-    "active": true,
-    "approved": true
-  },
-  {
-    "name": "Epifanio Pedraza",
-    "sex": "H",
-    "role": "Siervo ministerial",
-    "active": true,
-    "approved": true
-  },
-  {
-    "name": "Brian Rivadeneira",
-    "sex": "H",
-    "role": "",
-    "active": true,
-    "approved": false
-  },
-  {
-    "name": "Brian Torres",
-    "sex": "H",
-    "role": "",
-    "active": true,
-    "approved": false
-  },
-  {
-    "name": "Martin Zerda Jr",
-    "sex": "H",
-    "role": "",
-    "active": true,
-    "approved": false
-  },
-  {
-    "name": "Isaías Schell",
-    "sex": "H",
-    "role": "",
-    "active": true,
-    "approved": false
-  },
-  {
-    "name": "David Salica",
-    "sex": "H",
-    "role": "",
-    "active": true,
-    "approved": false
-  },
-  {
-    "name": "Emanuel Salica",
-    "sex": "H",
-    "role": "",
-    "active": true,
-    "approved": false
-  },
-  {
-    "name": "Martin Zerda",
-    "sex": "H",
-    "role": "",
-    "active": true,
-    "approved": false
-  },
-  {
-    "name": "Sergio Lazarte",
-    "sex": "H",
-    "role": "",
-    "active": true,
-    "approved": false
-  },
-  {
-    "name": "Roberto Lazarte",
-    "sex": "H",
-    "role": "",
-    "active": true,
-    "approved": false
-  },
-  {
-    "name": "Rodolfo Santucho",
-    "sex": "H",
-    "role": "",
-    "active": true,
-    "approved": false
-  }
+const SEED_PEOPLE = [
+  "Erica Paola Araya",
+  "Leonardo Araya",
+  "Carmen Ayaviri",
+  "Gloria Campos",
+  "Belén Correa",
+  "Elida Correa",
+  "Ruth Correa",
+  "Carla García",
+  "José Roberto Lazarte",
+  "María Lazarte",
+  "Maricel Lazarte",
+  "Ramona Medina",
+  "Cecilia Navarro",
+  "Marcelo Palavecino",
+  "Yesica Magalí Palavecino",
+  "Epifanio Pedraza",
+  "Juana Pedraza",
+  "María Teresa Pedraza",
+  "Sonia Pedraza",
+  "Gabriela Pérez",
+  "Marta Ponce",
+  "Carlos Rodríguez",
+  "Rebeca Rodríguez",
+  "Paola Saldaña",
+  "Sergio Saldaña",
+  "Abigail Salica",
+  "Aimé Salinas",
+  "Omar Santucho",
+  "Rodolfo Santucho",
+  "Maira Díaz",
+  "Nelson Díaz",
+  "María Frías",
+  "Carlos Gutiérrez",
+  "Luciana Gutiérrez",
+  "Sofía Gutiérrez",
+  "Lucrecia Juárez",
+  "Lucía Navarro",
+  "Luis Navarro",
+  "Maximiliano Navarro",
+  "Sofía Navarro",
+  "María Pérez",
+  "Nora Pérez",
+  "Antonella Salica",
+  "David Salica",
+  "Emmanuel Salica",
+  "Braian Torres",
+  "Luz Torres",
+  "Alicia Ávila",
+  "Irma Correa",
+  "Hugo García",
+  "Rosa Pedraza",
+  "Stella Pedraza",
+  "Ramona Pérez",
+  "Estefanía Pérez",
+  "Alfonsina Zerda",
+  "Lorena Zerda",
+  "Martín Zerda jr",
+  "Martín Zerda",
+  "Olivia Zerda",
+  "Ramón Arancibia",
+  "Silvia Arancibia",
+  "Alicia Correa",
+  "Miguel Gómez",
+  "Geraldine Pereira",
+  "Inés Pereyra",
+  "Adriana Reinoso",
+  "Alejandra Reinoso",
+  "Facundo Reinoso",
+  "Ramiro Reinoso",
+  "Jael Salinas",
+  "Eduar Jabez Salinas",
+  "Emilia Salinas",
+  "Josías Misael Salinas",
+  "Silvina Salinas",
+  "Beatriz Shell",
+  "Isaías Shell",
+  "Ayelén Soria",
+  "Rita Véliz",
+  "Erika Campero",
+  "Mical Jiménez",
+  "Mónica Jiménez",
+  "Cristina Lazarte",
+  "José Lazarte",
+  "Luisiana Lazarte",
+  "Ramona Lazarte",
+  "Sergio Lazarte",
+  "Braian Rivadeneira",
+  "Eduardo Rivadeneira",
+  "María Rivadeneira",
+  "Melani Rivadeneira",
+  "Florencia Saldaña",
+  "Romina Saldaña"
 ];
+
+async function seedAll(){
+  const msgEl = qs("#seedMsg");
+  msgEl.textContent = "Cargando lista...";
+  const current = await loadPeople();
+  const existing = new Set(current.map(p=> normalizeName((p.nombre || p.name || "")).toLowerCase()));
+  let addedCount = 0;
+
+  for(const nombre of SEED_PEOPLE){
+    const key = normalizeName(nombre).toLowerCase();
+    if(existing.has(key)) continue;
+
+    await savePerson({
+      nombre,
+      sexo: "",
+      rol: "publicador",
+      estado: "activo",
+      aprobado: false
+    });
+
+    addedCount++;
+    existing.add(key);
+  }
+
+  msgEl.textContent = "Listo. Agregados: " + addedCount + ". (Los existentes no se duplicaron)";
+  people = await loadPeople();
+  render();
+}
+
+const btnSeed = qs("#btnSeedAll");
+if(btnSeed){
+  btnSeed.addEventListener("click", async ()=>{
+    if(!confirm("¿Cargar la lista completa? (Solo hace falta una vez)")) return;
+    try{
+      await seedAll();
+    }catch(e){
+      console.error(e);
+      qs("#seedMsg").textContent = "Error al cargar la lista: " + (e?.message || e);
+    }
+  });
+}
 
 
 const tbl = qs("#tblPeople tbody");
@@ -238,25 +237,3 @@ form.addEventListener("submit", async (e)=>{
 qs("#search").addEventListener("input", debounce(render, 100));
 
 refresh();
-
-
-async function seedDefaultPeople(){
-  const existing = await loadPeople();
-  const existingNames = new Set(existing.map(p=>(p.name||"").toLowerCase()));
-  let added=0;
-  for(const p of DEFAULT_PEOPLE_VILLA_FIAD){
-    if(existingNames.has((p.name||"").toLowerCase())) continue;
-    await savePerson(p);
-    added++;
-  }
-  await refresh();
-  showMsg(added ? ("Lista inicial cargada. Agregados: " + added) : "Ya estaban cargados (no agregué duplicados).", "ok");
-}
-
-const btnSeed = document.getElementById("btnSeed");
-if(btnSeed){
-  btnSeed.addEventListener("click", async ()=>{
-    if(!confirm("Esto cargará una lista inicial de hermanos. Podés editar luego. ¿Continuar?")) return;
-    await seedDefaultPeople();
-  });
-}

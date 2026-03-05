@@ -11,7 +11,7 @@ async function load(){
   const w = await loadWeek(weekISO);
   const asg = await loadAssignments(weekISO);
 
-  qs("#cong").textContent = Storage.get("congregacion", 'CONG.: "VILLA FIAD"');
+  qs("#cong").textContent = Storage.get("congregacion", "CONG.: "VILLA FIAD"");
   qs("#title").textContent = "Programa para la reunión de entre semana";
   qs("#date").textContent = fmtDateAR(weekISO);
 
