@@ -1,0 +1,40 @@
+/* Board (S-140 inspired) */
+#boardWrap{display:flex; justify-content:center}
+#board{
+  width: 210mm;
+  min-height: 297mm;
+  background:#fff;
+  border: 1px solid #ddd;
+  padding: 14mm 12mm;
+  box-shadow: 0 10px 25px rgba(0,0,0,.08);
+}
+
+.board-top{
+  display:flex; justify-content:space-between; align-items:flex-end;
+  border-bottom: 3px solid #111827;
+  padding-bottom: 6mm;
+  margin-bottom: 5mm;
+}
+.board-top .left h1{margin:0; font-size:20px}
+.board-top .left .cong{font-weight:800; font-size:12px; letter-spacing:.3px}
+.board-top .left .date{margin-top:6px; font-size:14px; font-weight:800}
+.board-top .right{ text-align:right; font-size:12px}
+.board-top .right .label{color:#6b7280}
+.board-top .right .val{font-weight:800}
+
+#partsList{margin-top:6mm; display:flex; flex-direction:column; gap:8px}
+.board-row{
+  display:flex; justify-content:space-between; gap:12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 10px;
+}
+.board-row .sec{font-size:11px; color:#6b7280; font-weight:700}
+.board-row .main{font-size:14px; font-weight:800}
+.board-row .name{font-size:13px; font-weight:800; text-align:right}
+@media print{
+  body{background:#fff}
+  .topbar, .no-print{display:none !important}
+  #board{border:none; box-shadow:none; padding: 0; width:auto; min-height:auto}
+  #boardWrap{display:block}
+}

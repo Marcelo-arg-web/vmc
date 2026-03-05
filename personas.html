@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Personas — Planificador VMC</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  
+</head>
+<body>
+  <div class="topbar">
+    <div class="container nav">
+      <div class="brand">
+        <span id="appName">Planificador VMC</span>
+        <span class="badge" id="appVersion"></span>
+        <span class="badge" id="authStatus">—</span>
+      </div>
+      <div class="navlinks">
+        <a href="index.html">Inicio</a>
+        <a href="semana.html">Semana</a>
+        <a href="personas.html">Personas</a>
+        <a href="tablero.html">Tablero</a>
+        <a href="settings.html">Configuración</a>
+        <a href="login.html">Login</a>
+        <button id="btnLogout" class="ghost" style="display:none">Salir</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    
+<div class="grid cols-2">
+  <div class="card">
+    <h2 id="formTitle">Agregar persona</h2>
+    <form id="personForm">
+      <div class="small">Nombre</div>
+      <input id="name" style="width:100%" placeholder="Apellido, Nombre" />
+      <div class="grid cols-2" style="margin-top:10px">
+        <div>
+          <div class="small">Sexo</div>
+          <select id="sex" style="width:100%">
+            <option value="">—</option>
+            <option value="H">H (Hermano)</option>
+            <option value="M">M (Hermana)</option>
+          </select>
+        </div>
+        <div>
+          <div class="small">Rol</div>
+          <select id="role" style="width:100%">
+            <option value="">—</option>
+            <option>Anciano</option>
+            <option>Siervo Ministerial</option>
+            <option>Publicador</option>
+            <option>Publicadora</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <label class="row"><input id="student" type="checkbox"> <span>Estudiante</span></label>
+        <label class="row"><input id="approved" type="checkbox"> <span>Hermano aprobado (oración/lectura)</span></label>
+        <label class="row"><input id="spouseOnly" type="checkbox"> <span>Solo con familiar/cónyuge</span></label>
+        <label class="row"><input id="active" type="checkbox" checked> <span>Activo</span></label>
+      </div>
+
+      <div class="small" style="margin-top:10px">Notas</div>
+      <textarea id="notes" placeholder="Restricciones, observaciones..."></textarea>
+
+      <div class="row" style="margin-top:10px">
+        <button type="submit" class="success">Guardar</button>
+        <button type="button" id="btnCancel" class="ghost" style="display:none">Cancelar</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="row space">
+      <h2>Lista</h2>
+      <div id="status" class="small">—</div>
+    </div>
+    <input id="search" placeholder="Buscar..." style="width:100%; margin:10px 0" />
+    <table class="table" id="tblPeople">
+      <thead>
+        <tr>
+          <th>Nombre</th><th>Sexo</th><th>Rol</th><th>Est.</th><th>Aprob.</th><th>Activo</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+    <footer>
+      <div>Consejo: guardá la semana antes de pasar a otra. Si ves “No guardado”, no cambies de semana hasta guardar.</div>
+    </footer>
+  </div>
+
+  <script type="module" src="js/personas.js"></script>
+</body>
+</html>
