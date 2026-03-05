@@ -1,67 +1,19 @@
-<!doctype html>
-<html lang="es">
+
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Inicio — Planificador VMC</title>
-  <link rel="stylesheet" href="css/styles.css" />
-  
+<meta charset="utf-8">
+<title>Panel VMC</title>
 </head>
 <body>
-  <div class="topbar">
-    <div class="container nav">
-      <div class="brand">
-        <span id="appName">Planificador VMC</span>
-        <span class="badge" id="appVersion"></span>
-        <span class="badge" id="authStatus">—</span>
-      </div>
-      <div class="navlinks">
-        <a href="index.html">Inicio</a>
-        <a href="semana.html">Semana</a>
-        <a href="personas.html">Personas</a>
-        <a href="tablero.html">Tablero</a>
-        <a href="settings.html">Configuración</a>
-        <a href="login.html">Login</a>
-        <button id="btnLogout" class="ghost" style="display:none">Salir</button>
-      </div>
-    </div>
-  </div>
 
-  <div class="container">
-    
-<div class="grid cols-2">
-  <div class="card">
-    <h2>Semana de trabajo</h2>
-    <p>Elegí la semana (fecha) para cargar el link de WOL, sugerir asignados y guardar.</p>
-    <div class="row">
-      <input id="weekISO" type="date" />
-      <button id="btnGoWeek">Abrir semana</button>
-    </div>
-    <hr/>
-    <div id="controlBox" class="notice">—</div>
-    <div class="small">Si intentás cambiar de semana sin guardar, el sistema te va a advertir.</div>
-  </div>
+<h2>Panel reunión de jueves</h2>
 
-  <div class="card">
-    <h2>Primeros pasos</h2>
-    <ol>
-      <li>Ir a <b>Configuración</b> y pegar tu Firebase Config.</li>
-      <li>Ir a <b>Login</b> e iniciar sesión con un usuario de Firebase Auth.</li>
-      <li>Ir a <b>Personas</b> para cargar/editar la lista (sexo, rol, aprobados).</li>
-      <li>Ir a <b>Semana</b>, pegar link WOL, <b>Cargar</b>, <b>Sugerir</b>, <b>Guardar</b>.</li>
-      <li>Ir a <b>Tablero</b> para imprimir o exportar PNG para WhatsApp.</li>
-    </ol>
-    <div class="notice warn">
-      <b>Nota:</b> Para leer WOL desde GitHub Pages usamos un “mirror” (r.jina.ai). Si un día falla, en Configuración podés poner un Proxy (Worker) propio.
-    </div>
-  </div>
-</div>
+<p id="info"></p>
 
-    <footer>
-      <div>Consejo: guardá la semana antes de pasar a otra. Si ves “No guardado”, no cambies de semana hasta guardar.</div>
-    </footer>
-  </div>
+<button id="logout">Cerrar sesión</button>
 
-  <script type="module" src="js/home.js"></script>
+<script type="module" src="js/index.js"></script>
+
 </body>
 </html>
