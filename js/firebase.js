@@ -28,7 +28,7 @@ export function getFirebaseConfig(){
 }
 
 export function hasFirebaseConfig(){
-  return !!getFirebaseConfig();
+  try{ return !!getFirebaseConfig(); }catch(e){ console.error(e); return false; }
 }
 
 export function initFirebase(){

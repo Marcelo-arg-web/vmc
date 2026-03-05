@@ -8,8 +8,8 @@ const unsub = watchAuth(u=>{
   if(u) location.href="index.html";
 });
 if(unsub === null){
-  // No hay config guardada aún
-  location.href="settings.html";
+  const m = qs("#msg");
+  if(m) m.textContent = "Falta configurar Firebase. Abrí Configuración y guardá (o recargá con Ctrl+F5).";
 }
 
 qs("#btnLogin").addEventListener("click", async ()=>{
