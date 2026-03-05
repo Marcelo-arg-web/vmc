@@ -29,42 +29,91 @@
 
   <div class="container">
     
-<div class="grid cols-2">
-  <div class="card">
+
+<div class="card personas-full">
+  <div class="row space">
     <h2 id="formTitle">Agregar persona</h2>
-    <form id="personForm">
-      <div class="small">Nombre</div>
-      <input id="name" style="width:100%" placeholder="Apellido, Nombre" />
-      <div class="grid cols-2" style="margin-top:10px">
-        <div>
-          <div class="small">Sexo</div>
-          <select id="sex" style="width:100%">
-            <option value="">—</option>
-            <option value="H">H (Hermano)</option>
-            <option value="M">M (Hermana)</option>
-          </select>
-        </div>
-        <div>
-          <div class="small">Rol</div>
-          <select id="role" style="width:100%">
-            <option value="">—</option>
-            <option>Anciano</option>
-            <option>Siervo Ministerial</option>
-            <option>Publicador</option>
-            <option>Publicadora</option>
-          </select>
-        </div>
+    <div class="small" id="status">—</div>
+  </div>
+
+  <form id="personForm">
+    <div class="small">Nombre</div>
+    <input id="name" list="datalistName" style="width:100%" placeholder="Apellido, Nombre" />
+    <datalist id="datalistName"></datalist>
+
+    <div class="grid cols-2" style="margin-top:10px">
+      <div>
+        <div class="small">Sexo</div>
+        <select id="sex" style="width:100%">
+          <option value="">—</option>
+          <option value="H">H (Hermano)</option>
+          <option value="M">M (Hermana)</option>
+        </select>
+      </div>
+      <div>
+        <div class="small">Rol</div>
+        <select id="role" style="width:100%">
+          <option value="">—</option>
+          <option>Anciano</option>
+          <option>Siervo Ministerial</option>
+          <option>Publicador</option>
+          <option>Publicadora</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px; flex-wrap:wrap; gap:14px">
+      <label class="row"><input id="student" type="checkbox"> <span>Estudiante</span></label>
+      <label class="row"><input id="approved" type="checkbox"> <span>Hermano aprobado (oración/lectura)</span></label>
+      <label class="row"><input id="spouseOnly" type="checkbox"> <span>Solo con familiar/cónyuge</span></label>
+      <label class="row"><input id="active" type="checkbox" checked> <span>Activo</span></label>
+    </div>
+
+    <div class="small" style="margin-top:10px">Puede hacer</div>
+    <div class="row" style="margin-top:6px; gap:14px; flex-wrap:wrap">
+      <label class="row"><input id="puedePresidir" type="checkbox"> <span>Presidir (Presidente)</span></label>
+      <label class="row"><input id="puedeOracion" type="checkbox"> <span>Oraciones</span></label>
+      <label class="row"><input id="puedeTesoros" type="checkbox"> <span>Tesoros</span></label>
+      <label class="row"><input id="puedePerlas" type="checkbox"> <span>Perlas</span></label>
+    </div>
+
+    <div class="small" style="margin-top:10px">Notas</div>
+    <textarea id="notes" placeholder="Restricciones, observaciones..."></textarea>
+
+    <div class="row space" style="margin-top:12px; gap:10px; flex-wrap:wrap">
+      <div class="row" style="gap:8px; flex-wrap:wrap">
+        <button id="btnPrev" type="button" class="btn">Anterior</button>
+        <button id="btnNext" type="button" class="btn">Siguiente</button>
       </div>
 
-      <table class="table" id="tblPeople">
-      <thead>
-        <tr>
-          <th>Nombre</th><th>Sexo</th><th>Rol</th><th>Est.</th><th>Aprob.</th><th>Activo</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+      <div class="row" style="gap:8px; flex-wrap:wrap">
+        <span class="small" id="navInfo"></span>
+        <button type="submit" class="success">Guardar</button>
+        <button type="button" id="btnCancel" class="ghost" style="display:none">Cancelar</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="margin-top:14px; display:none" id="listCard">
+  <div class="row space">
+    <h2>Lista</h2>
+    <button id="btnToggleList" class="btn" type="button">Ocultar lista</button>
   </div>
+  <input id="search" placeholder="Buscar..." style="width:100%; margin:10px 0" />
+  <table class="table" id="tblPeople">
+    <thead>
+      <tr>
+        <th>Nombre</th><th>Sexo</th><th>Rol</th><th>Est.</th><th>Aprob.</th><th>Activo</th><th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div style="margin-top:10px">
+  <button id="btnShowList" class="btn" type="button">Mostrar lista</button>
+</div>
 </div>
 
     <footer>
@@ -72,6 +121,6 @@
     </footer>
   </div>
 
-  <script type="module" src="js/personas.js"></script>
+  <script type="module" src="js/personas_20260305211058.js"></script>
 </body>
 </html>

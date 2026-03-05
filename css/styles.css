@@ -126,3 +126,8 @@ hr{border:none; border-top:1px solid var(--line); margin:12px 0}
 .notice.err{border-color:#ef444440; background:#fef2f2}
 
 footer{padding:20px 0; color:var(--muted); font-size:12px}
+
+
+/* Personas UI */
+.personas-full{ width:100%; }
+.personas-full textarea{ min-height:90px; }
