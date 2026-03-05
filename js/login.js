@@ -1,29 +1,20 @@
+import { qs } from "./app.js";
+import { mountHeader } from "./ui_common.js";
 import { login, watchAuth } from "./firebase.js";
 
-const msg = document.getElementById("msg");
+mountHeader();
 
-watchAuth((u) => {
-  if (u) location.href = "index.html";
+watchAuth(u=>{
+  if(u) location.href="index.html";
 });
 
-document.getElementById("btnLogin").addEventListener("click", async (e) => {
-  e.preventDefault();
-
-  const email = document.getElementById("email").value.trim();
-  const pass = document.getElementById("password").value;
-
-  if (!email || !pass) {
-    msg.textContent = "Ingresá email y contraseña.";
-    return;
-  }
-
-  msg.textContent = "Iniciando sesión...";
-
-  try {
+qs("#btnLogin").addEventListener("click", async ()=>{
+  const email = qs("#email").value.trim();
+  const pass = qs("#password").value;
+  qs("#msg").textContent = "";
+  try{
     await login(email, pass);
-    // redirige por watchAuth
-  } catch (err) {
-    msg.textContent = "Error: " + (err?.message || err);
-    console.error(err);
+  }catch(e){
+    qs("#msg").textContent = "No se pudo iniciar sesión: " + (e?.message || e);
   }
 });
