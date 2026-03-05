@@ -10,14 +10,10 @@ export function mountHeader(){
   const logoutBtn = qs("#btnLogout");
   if(statusEl){
     try{
-      const unsub = watchAuth(u=>{
+      watchAuth(u=>{
         statusEl.textContent = u ? ("Conectado: "+ (u.email||"")) : "No conectado";
         if(logoutBtn) logoutBtn.style.display = u ? "inline-flex" : "none";
       });
-      if(unsub === null){
-        statusEl.textContent = "Configurar Firebase";
-        if(logoutBtn) logoutBtn.style.display = "none";
-      }
     }catch(e){
       statusEl.textContent = "Configurar Firebase";
     }

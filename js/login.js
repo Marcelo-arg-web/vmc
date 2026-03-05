@@ -4,13 +4,9 @@ import { login, watchAuth } from "./firebase.js";
 
 mountHeader();
 
-const unsub = watchAuth(u=>{
+watchAuth(u=>{
   if(u) location.href="index.html";
 });
-if(unsub === null){
-  const m = qs("#msg");
-  if(m) m.textContent = "Falta configurar Firebase. Abrí Configuración y guardá (o recargá con Ctrl+F5).";
-}
 
 qs("#btnLogin").addEventListener("click", async ()=>{
   const email = qs("#email").value.trim();

@@ -1,6 +1,6 @@
 export const APP = {
   name: "Planificador VMC",
-  version: "1.0.2"
+  version: "1.0.0"
 };
 
 export const Storage = {
