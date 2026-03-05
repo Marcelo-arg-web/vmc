@@ -4,6 +4,26 @@ import { loadPeople, savePerson, deletePerson } from "./data.js";
 
 mountHeader();
 
+
+function stripAccents(s){
+  return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+function guessSexByName(fullName){
+  const n = normalizeName(fullName||"");
+  const first = stripAccents((n.split(" ")[0]||"")).toLowerCase();
+  const fem = new Set([
+    "erica","érica","paola","carmen","gloria","belen","belén","elida","élida","ruth","carla","maria","maría","ana","maricel","maricela"
+  ]);
+  const masc = new Set([
+    "marcelo","sergio","leonardo","luis","eduardo","hugo","omar","epifanio","roberto","rodolfo","david","emanuel","martin","martín","braian","brian","isaias","isaías","facundo"
+  ]);
+  if(fem.has(first)) return "M";
+  if(masc.has(first)) return "H";
+  if(first.endsWith("a") && !["isaias","isaías","elias","matias","matías","luca"].includes(first)) return "M";
+  return "";
+}
+
+
 const SEED_PEOPLE = [
   "Erica Paola Araya",
   "Leonardo Araya",
@@ -228,6 +248,12 @@ form.addEventListener("submit", async (e)=>{
     approved: qs("#approved").checked,
     active: qs("#active").checked,
     spouseOnly: qs("#spouseOnly").checked,
+    can: {
+      presidir: qs("#puedePresidir")?.checked || false,
+      oracion: qs("#puedeOracion")?.checked || false,
+      tesoros: qs("#puedeTesoros")?.checked || false,
+      perlas: qs("#puedePerlas")?.checked || false
+    },
     notes: qs("#notes").value
   };
   await savePerson(person);
@@ -268,3 +294,11 @@ if(btnRepair){
     }
   });
 }
+
+
+// Sugerencia automática de sexo (editable)
+qs("#name").addEventListener("blur", ()=>{
+  if(qs("#sex").value) return;
+  const g = guessSexByName(qs("#name").value);
+  if(g) qs("#sex").value = g;
+});

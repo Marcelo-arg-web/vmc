@@ -13,6 +13,7 @@ export const Rules = {
     const role = person.role || "";
     const sexo = person.sex || "";
     const approvedBrother = (sexo === "H" && person.approved === true);
+    const can = person.can || {};
     const isElder = role === "Anciano";
     const isSM = role === "Siervo Ministerial";
     const name = (person.name||"").toLowerCase();
@@ -22,14 +23,14 @@ export const Rules = {
 
     switch(partType){
       case "Presidente":
-        return isElder || isMarceloRod;
+        return (can.presidir===true) || (can.presidir===false ? false : (isElder || isMarceloRod));
       case "Oración (inicio)":
       case "Oración (final)":
-        return approvedBrother;
+        return approvedBrother && (can.oracion===true || can.oracion===undefined);
       case "Tesoros 1 (Discurso)":
       case "Tesoros 2 (Perlas)":
       case "Tesoros 3 (Lectura Biblia)":
-        if(partType === "Tesoros 3 (Lectura Biblia)") return approvedBrother;
+        if(partType === "Tesoros 3 (Lectura Biblia)") return approvedBrother && (can.oracion===true || can.oracion===undefined);
         return isElder || isSM;
       case "Maestros 4":
       case "Maestros 5":
@@ -42,7 +43,7 @@ export const Rules = {
       case "Estudio bíblico (Conductor)":
         return isElder || isMarceloRod || isEduRiv;
       case "Estudio bíblico (Lector)":
-        return approvedBrother;
+        return approvedBrother && (can.oracion===true || can.oracion===undefined);
       case "Repaso y anuncios":
         return isElder || isSM;
       default:

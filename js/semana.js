@@ -97,9 +97,21 @@ function buildDefaultAssignments(){
     rows.push({ order:++order, key:`p_${p.type}_${p.partNo}_${order}`, type:p.type, title:p.title, person1Id:"", person1Name:"", person2Id:"", person2Name:"", needsHelper: p.type.startsWith("Maestros") });
   }
 
-  rows.push({ order:++order, key:"repaso", type:"Repaso y anuncios", title:"Repaso, adelanto y anuncios", person1Id:"", person1Name:"" });
-  rows.push({ order:++order, key:"oracion_fin", type:"Oración (final)", title:"Oración final", person1Id:"", person1Name:"" });
+    rows.push({ order:++order, key:"oracion_fin", type:"Oración (final)", title:"Oración final", person1Id:"", person1Name:"" });
   return rows;
+}
+
+
+function optionsForRow(row, isHelper=false){
+  const opts = ["<option value=''>—</option>"];
+  for(const p of people){
+    if(p.active===false) continue;
+    // filtro por reglas (Presidente/Oración/Tesoros/Perlas/etc.)
+    const ok = Rules.allowedFor(row.type, p);
+    if(!ok) continue;
+    opts.push(`<option value="${p.id}">${p.name}</option>`);
+  }
+  return opts.join("");
 }
 
 function renderAssignments(){
@@ -112,14 +124,11 @@ function renderAssignments(){
   t.innerHTML = `<thead><tr><th>Parte</th><th>Título</th><th>Asignado</th><th>Ayudante</th></tr></thead><tbody></tbody>`;
   const tb=t.querySelector("tbody");
 
-  const peopleOptions = ["<option value=''>—</option>"].concat(
-    people.filter(p=>p.active!==false).map(p=>`<option value="${p.id}">${p.name}</option>`)
-  ).join("");
-
+  
   for(const r of assignments){
     const tr=document.createElement("tr");
     const helper = r.needsHelper ? `
-      <select data-h2="${r.key}">${peopleOptions}</select>
+      <select data-h2="${r.key}">${optionsForRow(r, true)}</select>
     ` : `<span class="small">—</span>`;
     tr.innerHTML = `
       <td><span class="pill">${r.type}</span></td>
@@ -127,7 +136,7 @@ function renderAssignments(){
         <input data-title="${r.key}" value="${(r.title||"").replace(/"/g,"&quot;")}" style="width:100%" />
         <div class="small">Editable (por videos / viajante / necesidad).</div>
       </td>
-      <td><select data-h1="${r.key}">${peopleOptions}</select></td>
+      <td><select data-h1="${r.key}">${optionsForRow(r)}</select></td>
       <td>${helper}</td>
     `;
     tb.appendChild(tr);
