@@ -4,9 +4,13 @@ import { login, watchAuth } from "./firebase.js";
 
 mountHeader();
 
-watchAuth(u=>{
+const unsub = watchAuth(u=>{
   if(u) location.href="index.html";
 });
+if(unsub === null){
+  // No hay config guardada aún
+  location.href="settings.html";
+}
 
 qs("#btnLogin").addEventListener("click", async ()=>{
   const email = qs("#email").value.trim();
