@@ -50,12 +50,11 @@ function setWeekPretty(){ qs("#weekPretty").textContent = fmtDateAR(weekInput.va
 function refreshAutoWOLHint(){
   const predicted = predictWOLUrlFromWeekISO(weekInput.value);
   if(predicted){
-    wolAutoHint.textContent = `Sugerido automáticamente desde abril de 2026: ${predicted}`;
-    btnAutoWOL.disabled = false;
+    wolAutoHint.textContent = `Sugerido automáticamente desde marzo de 2026: ${predicted}`;
   } else {
-    wolAutoHint.textContent = "La sugerencia automática de enlaces está preparada desde abril de 2026.";
-    btnAutoWOL.disabled = true;
+    wolAutoHint.textContent = "Elegí una semana desde marzo de 2026 para autocompletar el enlace.";
   }
+  btnAutoWOL.disabled = false;
 }
 
 function applyPredictedWOL(force=false){

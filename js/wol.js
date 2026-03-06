@@ -1,27 +1,20 @@
 import { markUnsaved } from "./app.js";
 
 const AUTO_WOL_BASE = {
-  anchorISO: "2026-04-02",
-  anchorCode: 202026085,
+  anchorISO: "2026-03-05",
+  anchorCode: 202026081,
   urlPrefix: "https://wol.jw.org/es/wol/d/r4/lp-s/"
 };
 
-function parseISODate(iso){
-  const [y,m,d] = (iso || "").split("-").map(Number);
-  if(!y || !m || !d) return null;
-  return new Date(y, m-1, d);
+function parseISODate(iso) {
+  const [y, m, d] = (iso || "").split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
 }
 
-function isoFromDate(d){
-  const year = d.getFullYear();
-  const month = String(d.getMonth()+1).padStart(2,"0");
-  const day = String(d.getDate()).padStart(2,"0");
-  return `${year}-${month}-${day}`;
-}
-
-function normalizeToMeetingWeekThursday(iso){
+function normalizeToMeetingWeekThursday(iso) {
   const d = parseISODate(iso);
-  if(!d) return null;
+  if (!d) return null;
   const jsDay = d.getDay();
   const mondayBased = (jsDay + 6) % 7;
   const monday = new Date(d);
@@ -31,11 +24,11 @@ function normalizeToMeetingWeekThursday(iso){
   return thursday;
 }
 
-export function predictWOLUrlFromWeekISO(weekISO){
+export function predictWOLUrlFromWeekISO(weekISO) {
   const targetThursday = normalizeToMeetingWeekThursday(weekISO);
   const anchorThursday = parseISODate(AUTO_WOL_BASE.anchorISO);
-  if(!targetThursday || !anchorThursday) return "";
-  if(targetThursday < anchorThursday) return "";
+  if (!targetThursday || !anchorThursday) return "";
+  if (targetThursday < anchorThursday) return "";
   const diffWeeks = Math.round((targetThursday - anchorThursday) / 604800000);
   const code = AUTO_WOL_BASE.anchorCode + diffWeeks;
   return `${AUTO_WOL_BASE.urlPrefix}${code}`;
@@ -48,9 +41,12 @@ export function buildFetchCandidates(wolUrl, proxyBase) {
   const encoded = encodeURIComponent(clean);
   const out = [];
   const add = (u) => { if (u && !out.includes(u)) out.push(u); };
+
   if (proxyBase) add(proxyBase + encoded);
-  add(`https://api.allorigins.win/raw?url=${encoded}`);
   add(`https://api.allorigins.win/get?url=${encoded}`);
+  add(`https://api.allorigins.win/raw?url=${encoded}`);
+  add(`https://api.codetabs.com/v1/proxy?quest=${encoded}`);
+  add(`https://corsproxy.io/?${encoded}`);
   add(`https://r.jina.ai/http://${noProto}`);
   add(clean);
   return out;
@@ -69,6 +65,8 @@ function norm(s) {
 
 function titleCaseBible(s) {
   return compact(s)
+    .replace(/,([0-9])/g, ", $1")
+    .replace(/([0-9]),([0-9])/g, "$1, $2")
     .toLowerCase()
     .replace(/(^|\s)([a-záéíóúñ])/g, (_, a, b) => a + b.toUpperCase())
     .replace(/\bis\b/g, "Is")
@@ -79,10 +77,21 @@ function cleanText(raw) {
   return (raw || "")
     .replace(/\r/g, "")
     .replace(/\u00a0/g, " ")
-    .replace(/【\d+†[^\]]*】/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&aacute;/gi, "á")
+    .replace(/&eacute;/gi, "é")
+    .replace(/&iacute;/gi, "í")
+    .replace(/&oacute;/gi, "ó")
+    .replace(/&uacute;/gi, "ú")
+    .replace(/&ntilde;/gi, "ñ")
     .replace(/【\d+†[^】]*】/g, " ")
     .replace(/【\d+】/g, " ")
-    .replace(/\[[^\]]*\]\((?:https?:\/\/)?[^)]+\)/g, " ")
+    .replace(/\[([^\]]+)\]\((?:https?:\/\/)?[^)]+\)/g, "$1")
     .replace(/\*\*/g, "")
     .replace(/[_`>#]+/g, " ")
     .replace(/[ \t]+\n/g, "\n")
@@ -94,7 +103,6 @@ function textFromHTML(html) {
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "");
 
-  // Convertir algunos bloques a saltos de línea para no perder estructura.
   const structural = withoutScripts
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|section|article|h1|h2|h3|h4|h5|h6|li)>/gi, "\n")
@@ -107,15 +115,15 @@ function textFromHTML(html) {
 function getLines(text) {
   return cleanText(text)
     .split(/\n+/)
-    .map(compact)
+    .map((line) => compact(line.replace(/^Markdown Content:\s*/i, "").replace(/^Title:\s*/i, "")))
     .filter(Boolean);
 }
 
 function parseReading(lines) {
-  // Preferir el encabezado semanal: ISAÍAS 43, 44
   for (const line of lines) {
-    if (/^[1-3]?\s?[A-ZÁÉÍÓÚÑ]+\s+\d+[,:]?\s*\d*/.test(line)) {
-      return titleCaseBible(line.replace(/\s+/g, " "));
+    const cleaned = compact(line.replace(/^#+\s*/, ""));
+    if (/^[1-3]?\s?[A-ZÁÉÍÓÚÑ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ]{2,})*\s+\d+(?:\s*,\s*\d+)+$/i.test(cleaned)) {
+      return titleCaseBible(cleaned);
     }
   }
 
@@ -133,25 +141,19 @@ function parseReading(lines) {
 function parseSongs(lines) {
   const songNums = [];
   for (const line of lines) {
-    const m = line.match(/canci[oó]n\s+(\d+)/i);
-    if (m) songNums.push(m[1]);
+    const matches = [...line.matchAll(/canci[oó]n\s+(\d+)/gi)];
+    for (const m of matches) songNums.push(m[1]);
   }
   return {
     openingSong: songNums[0] || "",
     middleSong: songNums[1] || "",
-    closingSong: songNums[songNums.length - 1] || "",
+    closingSong: songNums.length ? songNums[songNums.length - 1] : ""
   };
 }
 
 function parseMinutes(line) {
   const m = line.match(/\((\d+)\s*min/i);
   return m ? Number(m[1]) : "";
-}
-
-function parseStudentType(title) {
-  const n = norm(title);
-  if (n.includes("discurso")) return "Discurso de estudiante";
-  return "Asignación estudiantil";
 }
 
 function sectionRange(lines, startNeedle, endNeedles) {
@@ -169,10 +171,7 @@ function sectionRange(lines, startNeedle, endNeedles) {
 }
 
 function parseTesoros(lines, reading) {
-  const sec = sectionRange(lines, "TESOROS DE LA BIBLIA", [
-    "SEAMOS MEJORES MAESTROS",
-    "NUESTRA VIDA CRISTIANA",
-  ]);
+  const sec = sectionRange(lines, "TESOROS DE LA BIBLIA", ["SEAMOS MEJORES MAESTROS", "NUESTRA VIDA CRISTIANA"]);
   const parts = [];
 
   for (let i = 0; i < sec.length; i++) {
@@ -206,11 +205,15 @@ function parseTesoros(lines, reading) {
         type: "Lectura de la Biblia",
         title: `Lectura de la Biblia${detail ? " — " + detail : ""}`,
         minutes: minutes || 4,
-        detail: detail || reading,
+        detail: detail || reading
       });
     }
   }
   return parts;
+}
+
+function parseStudentType(title) {
+  return /discurso/i.test(title) ? "Discurso de estudiante" : "Asignación estudiantil";
 }
 
 function parseStudentParts(lines) {
@@ -224,18 +227,21 @@ function parseStudentParts(lines) {
     if (!m) continue;
 
     const order = Number(m[1]);
-    const title = compact(m[2]);
     if (order < 4) continue;
-
+    const title = compact(m[2]);
     let minutes = "";
-    let detail = "";
+    const detailBits = [];
 
     for (let j = i + 1; j < sec.length; j++) {
       const next = sec[j];
       if (/^(\d+)\.?\s+/.test(next)) break;
-      if (!minutes && /\(\d+\s*min/i.test(next)) minutes = parseMinutes(next);
-      if (!detail && !/\(\d+\s*min/i.test(next)) detail = compact(next);
-      else if (detail && !/\(\d+\s*min/i.test(next))) detail += " " + compact(next);
+      if (!minutes && /\(\d+\s*min/i.test(next)) {
+        minutes = parseMinutes(next);
+        const after = compact(next.replace(/^\([^)]*\)\s*/, ""));
+        if (after) detailBits.push(after);
+        continue;
+      }
+      if (!/\(\d+\s*min/i.test(next)) detailBits.push(compact(next));
     }
 
     parts.push({
@@ -243,20 +249,15 @@ function parseStudentParts(lines) {
       type: parseStudentType(title),
       title,
       minutes,
-      detail,
-      needsHelper: !/discurso/i.test(norm(title)),
+      detail: compact(detailBits.join(" ")),
+      needsHelper: !/discurso/i.test(title)
     });
   }
   return parts;
 }
 
 function parseVidaCristiana(lines) {
-  const sec = sectionRange(lines, "NUESTRA VIDA CRISTIANA", [
-    "PALABRAS DE CONCLUSIÓN",
-    "PALABRAS DE CONCLUSION",
-    "REPASO DE ESTA REUNIÓN",
-    "REPASO DE ESTA REUNION",
-  ]);
+  const sec = sectionRange(lines, "NUESTRA VIDA CRISTIANA", ["PALABRAS DE CONCLUSIÓN", "PALABRAS DE CONCLUSION", "REPASO DE ESTA REUNIÓN", "REPASO DE ESTA REUNION"]);
   const parts = [];
   let ebcTitle = "";
 
@@ -271,18 +272,23 @@ function parseVidaCristiana(lines) {
     const title = compact(m[2]);
     const n = norm(title);
     let minutes = "";
-    let detail = "";
+    const detailBits = [];
 
     for (let j = i + 1; j < sec.length; j++) {
       const next = sec[j];
       if (/^(\d+)\.?\s+/.test(next)) break;
-      if (!minutes && /\(\d+\s*min/i.test(next)) minutes = parseMinutes(next);
-      if (!detail && !/\(\d+\s*min/i.test(next) && !/^canci[oó]n\s+\d+/i.test(next)) detail = compact(next);
-      else if (detail && !/\(\d+\s*min/i.test(next) && !/^canci[oó]n\s+\d+/i.test(next)) detail += " " + compact(next);
+      if (!minutes && /\(\d+\s*min/i.test(next)) {
+        minutes = parseMinutes(next);
+        const after = compact(next.replace(/^\([^)]*\)\s*/, ""));
+        if (after) detailBits.push(after);
+        continue;
+      }
+      if (!/^canci[oó]n\s+\d+/i.test(next)) detailBits.push(compact(next));
     }
 
+    const detail = compact(detailBits.join(" "));
     if (n.includes("estudio biblico de la congregacion")) {
-      ebcTitle = title + (detail ? " — " + detail : "");
+      ebcTitle = detail;
       parts.push({ section: "Nuestra vida cristiana", type: "Conductor EBC", title: "Estudio bíblico de la congregación", minutes: minutes || 30, detail });
       parts.push({ section: "Nuestra vida cristiana", type: "Lector EBC", title: "Estudio bíblico de la congregación", minutes: minutes || 30, detail });
     } else {
@@ -291,7 +297,7 @@ function parseVidaCristiana(lines) {
         type: n.includes("necesidades de la congregacion") ? "Necesidades de la congregación" : "Nuestra vida cristiana",
         title,
         minutes,
-        detail,
+        detail
       });
     }
   }
@@ -299,10 +305,30 @@ function parseVidaCristiana(lines) {
   return { parts, ebcTitle };
 }
 
+function parseProgramFromText(rawText) {
+  const text = /<html/i.test(rawText) ? textFromHTML(rawText) : cleanText(rawText);
+  const lines = getLines(text);
+  const reading = parseReading(lines);
+  const songs = parseSongs(lines);
+  const tesoros = parseTesoros(lines, reading);
+  const student = parseStudentParts(lines);
+  const vida = parseVidaCristiana(lines);
+  return {
+    parts: [...tesoros, ...student, ...vida.parts],
+    meta: {
+      reading,
+      openingSong: songs.openingSong,
+      middleSong: songs.middleSong,
+      closingSong: songs.closingSong,
+      ebcTitle: vida.ebcTitle
+    },
+    lines
+  };
+}
+
 export async function fetchAndParseWOL({ wolUrl, proxyBase = null }) {
   const candidates = buildFetchCandidates(wolUrl, proxyBase);
   if (!candidates.length) throw new Error("Pegá un link de WOL.");
-
   const errors = [];
 
   for (const candidate of candidates) {
@@ -313,46 +339,25 @@ export async function fetchAndParseWOL({ wolUrl, proxyBase = null }) {
       const body = await res.text();
       if (!body) throw new Error("Respuesta vacía");
 
-      let raw = "";
+      let raw = body;
       if (contentType.includes("application/json") || /^\s*\{/.test(body)) {
         try {
           const parsed = JSON.parse(body);
-          raw = parsed.contents || parsed.body || parsed.html || parsed.data || "";
+          raw = parsed.contents || parsed.body || parsed.html || parsed.data || body;
         } catch {
           raw = body;
         }
-      } else {
-        raw = body;
       }
 
-      if (!raw) throw new Error("Respuesta vacía");
-
-      const text = /<html/i.test(raw) ? textFromHTML(raw) : cleanText(raw);
-      const lines = getLines(text);
-      const reading = parseReading(lines);
-      const songs = parseSongs(lines);
-      const tesoros = parseTesoros(lines, reading);
-      const student = parseStudentParts(lines);
-      const vida = parseVidaCristiana(lines);
-      const parts = [...tesoros, ...student, ...vida.parts];
-
-      if (!parts.length) {
-        throw new Error("La respuesta no contiene el programa de la reunión");
-      }
+      const parsed = parseProgramFromText(raw);
+      if (!parsed.parts.length) throw new Error("La respuesta no contiene el programa de la reunión");
 
       markUnsaved("Se cargó el programa desde WOL.");
       return {
-        parts,
-        meta: {
-          reading,
-          openingSong: songs.openingSong,
-          middleSong: songs.middleSong,
-          closingSong: songs.closingSong,
-          ebcTitle: vida.ebcTitle,
-        },
-        rawTextSample: lines.slice(0, 120).join("
-"),
-        sourceUrl: candidate,
+        parts: parsed.parts,
+        meta: parsed.meta,
+        rawTextSample: parsed.lines.slice(0, 120).join("\n"),
+        sourceUrl: candidate
       };
     } catch (err) {
       errors.push(`${candidate} -> ${err?.message || "error desconocido"}`);
