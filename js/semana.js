@@ -45,6 +45,20 @@ function isNoMeeting(){ return ["asamblea","conmemoracion","sin_reunion"].includ
 function isTravelerVisit(){ return fields.weekType.value === "visita"; }
 function setWeekPretty(){ qs("#weekPretty").textContent = fmtDateAR(weekInput.value); }
 
+function showToast(text){
+  let el = qs("#toast");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "toast";
+    el.className = "app-toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> el.classList.remove("show"), 2000);
+}
+
 function gotoWeek(newISO){
   if(!guardBeforeSwitch()) return;
   weekInput.value = newISO;
@@ -83,7 +97,8 @@ function applyAppDefaults(){
 }
 
 function maybeApplyNoMeetingDefaults(){
-  const noMeeting = (appSettings.noMeetingDates || "").split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  const noMeeting = (appSettings.noMeetingDates || "").split(/
++/).map(x=>x.trim()).filter(Boolean);
   const row = noMeeting.find(x=>x.startsWith(`${weekInput.value} |`) || x === weekInput.value);
   if(row){
     const motive = row.split("|")[1]?.trim() || "Sin reunión";
@@ -117,7 +132,7 @@ async function loadAll(){
 
   maybeApplyNoMeetingDefaults();
   applyAppDefaults();
-  applyWeekTypeEffects();
+  applyWeekTypeEffects(false);
   renderParts();
   renderAssignments();
   qs("#status").textContent = "Listo";
@@ -130,8 +145,8 @@ function buildDefaultAssignments(){
   let order = 0;
   rows.push({ order:++order, key:"presidente", type:"Presidente", title:"Palabras de introducción" });
   rows.push({ order:++order, key:"oracion_inicial", type:"Oración inicial", title:"Oración inicial" });
-  for(const p of parts){
-    rows.push({ order:++order, key:`${p.type}_${order}`, type:p.type, title:p.title, section:p.section, minutes:p.minutes||"", needsHelper: !!p.needsHelper, detail:p.detail||"", person1Id:"", person1Name:"", person2Id:"", person2Name:"" });
+  for(const [idx, p] of parts.entries()){
+    rows.push({ order:++order, key:`part_${idx+1}_${p.type}`, type:p.type, title:p.title, section:p.section, minutes:p.minutes||"", needsHelper: !!p.needsHelper, detail:p.detail||"", person1Id:"", person1Name:"", person2Id:"", person2Name:"" });
   }
   rows.push({ order:++order, key:"oracion_final", type:"Oración final", title:"Oración final" });
   return rows;
@@ -148,13 +163,22 @@ function groupedAssignments(){
   return groups.filter(g=>g.rows.length);
 }
 
-function optionsForRow(row, helper=false){
+function candidateLabel(person, historyByPerson){
+  const hist = historyByPerson?.[person.id] || [];
+  if(!hist.length) return `${person.name} · sin historial`;
+  const latest = hist.slice().sort((a,b)=>(b.weekISO||"").localeCompare(a.weekISO||""))[0];
+  const weeks = latest?.weekISO ? Math.max(1, Math.floor((new Date(currentWeek()) - new Date(latest.weekISO)) / 604800000)) : 0;
+  return `${person.name} · hace ${weeks} sem.`;
+}
+
+function optionsForRow(row, helper=false, historyByPerson=null){
   const opts = ["<option value=''>—</option>"];
   const main = assignments.find(x=>x.key===row.key);
   for(const p of people){
     const ok = helper ? Rules.helperAllowed(people.find(x=>x.id===main?.person1Id), p) : Rules.allowedFor(row.type, p);
     if(!ok) continue;
-    opts.push(`<option value="${p.id}">${p.name}</option>`);
+    const label = historyByPerson ? candidateLabel(p, historyByPerson) : p.name;
+    opts.push(`<option value="${p.id}">${label}</option>`);
   }
   return opts.join("");
 }
@@ -172,17 +196,10 @@ function renderParts(){
     return;
   }
   if(!parts.length) parts = makeBaseParts();
-  partsBox.innerHTML = parts.map((p, idx)=>`
-    <div class="detected-row">
-      <div class="detected-no">${idx+1}</div>
-      <div>
-        <div class="detected-title">${p.title || p.type}</div>
-        <div class="small">${p.section || ""}${p.minutes ? ` · ${p.minutes} min.` : ""}</div>
-      </div>
-    </div>`).join("");
+  partsBox.innerHTML = parts.map((p, idx)=>`<div class="detected-row"><div class="detected-no">${idx+1}</div><div><div class="detected-title">${p.title || p.type}</div><div class="small">${p.section || ""}${p.minutes ? ` · ${p.minutes} min.` : ""}${p.detail ? ` · ${p.detail}` : ""}</div></div></div>`).join("");
 }
 
-function renderAssignments(){
+function renderAssignments(historyByPerson=null){
   asgBox.innerHTML = "";
   if(isNoMeeting()){
     asgBox.innerHTML = `<div class="small">No se generan asignaciones para esta semana.</div>`;
@@ -196,19 +213,10 @@ function renderAssignments(){
     sec.className = "assign-group";
     sec.innerHTML = `<div class="assign-group-title">${group.label}</div>`;
     for(const r of group.rows){
-      const helper = r.needsHelper ? `<select data-h2="${r.key}">${optionsForRow(r, true)}</select>` : `<span class="small">—</span>`;
+      const helper = r.needsHelper ? `<select data-h2="${r.key}">${optionsForRow(r, true, historyByPerson)}</select>` : `<span class="small">—</span>`;
       const row = document.createElement("div");
       row.className = "assign-row";
-      row.innerHTML = `
-        <div>
-          <div class="assign-type">${r.type}</div>
-          <div class="assign-sub">${rowSubtitle(r)}</div>
-        </div>
-        <div>
-          <input data-title="${r.key}" value="${(r.title||"").replace(/"/g,"&quot;")}" style="width:100%" />
-        </div>
-        <div><select data-h1="${r.key}">${optionsForRow(r)}</select></div>
-        <div>${helper}</div>`;
+      row.innerHTML = `<div><div class="assign-type">${r.type}</div><div class="assign-sub">${rowSubtitle(r)}</div></div><div><input data-title="${r.key}" value="${(r.title||"").replace(/"/g,"&quot;")}" style="width:100%" /></div><div><select data-h1="${r.key}">${optionsForRow(r, false, historyByPerson)}</select></div><div>${helper}</div>`;
       sec.appendChild(row);
     }
     wrap.appendChild(sec);
@@ -221,10 +229,7 @@ function renderAssignments(){
     sel.addEventListener("change", ()=>{
       const p = people.find(x=>x.id===sel.value);
       row.person1Id = sel.value; row.person1Name = p?.name || "";
-      if(row.needsHelper){
-        row.person2Id = ""; row.person2Name = "";
-        renderAssignments();
-      }
+      if(row.needsHelper){ row.person2Id = ""; row.person2Name = ""; renderAssignments(historyByPerson); }
       markUnsaved("Se editaron asignaciones.");
     });
   });
@@ -243,27 +248,44 @@ function renderAssignments(){
   });
 }
 
-function applyWeekTypeEffects(){
+function applyWeekTypeEffects(resetAssignments=true){
   if(isTravelerVisit()){
-    assignments = assignments.filter(x=>!["Conductor EBC","Lector EBC"].includes(x.type));
     parts = (parts.length ? parts : makeBaseParts()).filter(x=>!["Conductor EBC","Lector EBC","Discurso del viajante"].includes(x.type));
     parts.push({ section:"Nuestra vida cristiana", type:"Discurso del viajante", title: fields.travelerTalkTitle.value || "Discurso de servicio del viajante", minutes:30 });
-    assignments = buildDefaultAssignments();
+    if(resetAssignments) assignments = buildDefaultAssignments();
   } else if(!isNoMeeting()){
     const hasTraveler = parts.some(x=>x.type === "Discurso del viajante");
     if(hasTraveler){
       parts = parts.filter(x=>x.type !== "Discurso del viajante");
       parts.push({ section:"Nuestra vida cristiana", type:"Conductor EBC", title:"Estudio bíblico de la congregación", minutes:30 });
       parts.push({ section:"Nuestra vida cristiana", type:"Lector EBC", title:"Estudio bíblico de la congregación", minutes:30 });
-      assignments = buildDefaultAssignments();
+      if(resetAssignments) assignments = buildDefaultAssignments();
     }
   }
   renderParts();
   renderAssignments();
 }
 
+function syncAssignmentsFromDOM(){
+  qsa("[data-title]", asgBox).forEach(inp=>{
+    const row = assignments.find(x=>x.key===inp.dataset.title);
+    if(row) row.title = inp.value.trim();
+  });
+  qsa("[data-h1]", asgBox).forEach(sel=>{
+    const row = assignments.find(x=>x.key===sel.dataset.h1);
+    const p = people.find(x=>x.id===sel.value);
+    if(row){ row.person1Id = sel.value || ""; row.person1Name = p?.name || ""; }
+  });
+  qsa("[data-h2]", asgBox).forEach(sel=>{
+    const row = assignments.find(x=>x.key===sel.dataset.h2);
+    const p = people.find(x=>x.id===sel.value);
+    if(row){ row.person2Id = sel.value || ""; row.person2Name = p?.name || ""; }
+  });
+}
+
 async function suggest(){
   if(isNoMeeting()) return show("Esta semana está marcada sin reunión.", "warn");
+  syncAssignmentsFromDOM();
   const hist = await loadRecentHistory(1200);
   const byPerson = {};
   for(const h of hist){
@@ -294,7 +316,7 @@ async function suggest(){
       if(best){ row.person2Id = best.id; row.person2Name = best.name; currentUsed.add(best.id); }
     }
   }
-  renderAssignments();
+  renderAssignments(byPerson);
   show("Sugerencias aplicadas. Revisá y ajustá lo necesario.");
 }
 
@@ -323,6 +345,7 @@ qs("#btnSuggest").addEventListener("click", suggest);
 qs("#btnToBoard").addEventListener("click", ()=> location.href = "tablero.html");
 
 qs("#btnSave").addEventListener("click", async ()=>{
+  syncAssignmentsFromDOM();
   const weekISO = currentWeek();
   const weekData = {
     wolUrl: fields.wolLink.value.trim(),
@@ -342,6 +365,7 @@ qs("#btnSave").addEventListener("click", async ()=>{
   await saveAssignments(weekISO, isNoMeeting() ? [] : assignments);
   if(!isNoMeeting()) await appendHistoryFromWeek(weekISO);
   show("Semana guardada.");
+  showToast("Guardado con éxito");
 });
 
 loadAll();

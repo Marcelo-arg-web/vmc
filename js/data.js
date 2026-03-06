@@ -1,6 +1,10 @@
 import { ensureInit, db, collection, getDocs, addDoc, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from "./firebase.js";
 import { normalizeName, markSaved, markUnsaved, slugify } from "./app.js";
 
+function compareNameKey(s){
+  return normalizeName(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
 export async function loadPeople(){
   await ensureInit();
   const snap = await getDocs(collection(db(), "personas"));
@@ -28,9 +32,9 @@ export async function savePerson(person){
   };
 
   const people = await loadPeople();
-  const existing = people.find(p => normalizeName(p.name).toLowerCase() === normalized.toLowerCase());
+  const existing = people.find(p => compareNameKey(p.name) === compareNameKey(normalized));
   if(person.id){
-    if(existing && existing.id !== person.id) throw new Error("Ya existe una persona con ese nombre.");
+    if(existing && existing.id !== person.id) throw new Error("Ya existe una persona con ese nombre y apellido.");
     await updateDoc(doc(db(), "personas", person.id), payload);
     markUnsaved("Se modificaron personas.");
     return person.id;

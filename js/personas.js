@@ -11,7 +11,7 @@ let currentIndex = -1;
 
 const CAP_KEYS = ["presidir","orar","tesoros","perlas","lecturaBiblia","estudiante","ayudante","discursoEstudiante","vidaCristiana","necesidades","conductorEbc","lectorEbc"];
 
-function stripAccents(s){ return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+function stripAccents(s){ return (s||"").normalize("NFD").replace(/[̀-ͯ]/g, ""); }
 function guessSexByName(fullName){
   const n = normalizeName(fullName||"");
   const first = stripAccents((n.split(" ")[0]||"")).toLowerCase();
@@ -23,9 +23,10 @@ function guessSexByName(fullName){
   return "";
 }
 
+function nameKey(name){ return stripAccents(normalizeName(name).toLowerCase()); }
 function getPersonByNormalizedName(name){
-  const n = normalizeName(name).toLowerCase();
-  return people.find(p => normalizeName(p.name).toLowerCase() === n);
+  const n = nameKey(name);
+  return people.find(p => nameKey(p.name) === n);
 }
 
 function showList(v){
@@ -52,6 +53,7 @@ function clearForm(){
   setCanToForm({});
   qs("#btnDelete").style.display = "none";
   qs("#btnCancel").style.display = "none";
+  qs("#status").textContent = `${people.length} personas`;
   updateNavInfo();
 }
 
@@ -125,14 +127,15 @@ async function reload(){
 }
 
 qs("#name").addEventListener("blur", ()=>{
-  const existing = getPersonByNormalizedName(qs("#name").value);
+  const typed = qs("#name").value;
+  const existing = getPersonByNormalizedName(typed);
   if(existing && existing.id !== currentId){
     fillForm(existing);
     qs("#status").textContent = "Nombre existente: se abrió para editar.";
     return;
   }
   if(qs("#sex").value) return;
-  const g = guessSexByName(qs("#name").value);
+  const g = guessSexByName(typed);
   if(g) qs("#sex").value = g;
 });
 
@@ -153,6 +156,12 @@ qs("#personForm").addEventListener("submit", async (e)=>{
   };
   if(!normalizeName(person.name)){ alert("Escribí el nombre."); return; }
   try{
+    const duplicate = getPersonByNormalizedName(person.name);
+    if(!person.id && duplicate){
+      fillForm(duplicate);
+      qs("#status").textContent = "Ese nombre ya existe. Se abrió para editar.";
+      return;
+    }
     const savedId = await savePerson(person);
     await reload();
     const saved = people.find(p=>p.id === savedId) || getPersonByNormalizedName(person.name);
@@ -171,6 +180,7 @@ qs("#btnDelete").addEventListener("click", async ()=>{
   await reload();
 });
 qs("#btnCancel").addEventListener("click", clearForm);
+qs("#btnNew").addEventListener("click", clearForm);
 qs("#btnPrev").addEventListener("click", goPrev);
 qs("#btnNext").addEventListener("click", goNext);
 qs("#btnShowList").addEventListener("click", ()=>showList(true));
