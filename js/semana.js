@@ -337,7 +337,7 @@ qs("#btnLoadWOL").addEventListener("click", async ()=>{
     parts = makeBaseParts();
     assignments = buildDefaultAssignments();
     applyWeekTypeEffects();
-    show("No se pudo leer WOL. Dejé el formulario completo para cargar todo manualmente.", "warn");
+    show(`No se pudo leer WOL (${e?.message || "sin detalle"}). Dejé el formulario completo para cargar todo manualmente.`, "warn");
   }
 });
 
