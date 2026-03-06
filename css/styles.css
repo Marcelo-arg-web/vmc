@@ -144,3 +144,14 @@ label.row{align-items:center}
 #asgBox .table{border:none; border-radius:0}
 #asgBox .table th{background:#eff6ff}
 #asgBox .table tr:nth-child(even) td{background:#fcfdff}
+
+
+.week-page{max-width:1400px;}
+.week-page .card{width:100%;}
+.week-page #asgBox .table th:nth-child(1){width:16%;}
+.week-page #asgBox .table th:nth-child(2){width:40%;}
+.week-page #asgBox .table th:nth-child(3),
+.week-page #asgBox .table th:nth-child(4){width:22%;}
+@media (min-width: 1100px){
+  .week-page .wide-section{padding:18px;}
+}

@@ -8,6 +8,7 @@ let people = [];
 let filtered = [];
 let currentId = null;
 let currentIndex = -1;
+let originalName = "";
 
 const CAP_KEYS = ["presidir","orar","tesoros","perlas","lecturaBiblia","estudiante","ayudante","discursoEstudiante","vidaCristiana","necesidades","conductorEbc","lectorEbc"];
 
@@ -45,8 +46,10 @@ function clearForm(){
   qs("#personForm").reset();
   qs("#active").checked = true;
   setCanToForm({});
+  originalName = "";
   qs("#btnDelete").style.display = "none";
   qs("#btnCancel").style.display = "none";
+  qs("#btnSubmit").textContent = "Agregar persona";
   updateNavInfo();
 }
 
@@ -54,6 +57,7 @@ function fillForm(p){
   currentId = p.id;
   currentIndex = filtered.findIndex(x=>x.id === p.id);
   qs("#formTitle").textContent = "Editar persona";
+  originalName = p.name || "";
   qs("#name").value = p.name || "";
   qs("#familyGroup").value = p.familyGroup || "";
   qs("#sex").value = p.sex || "";
@@ -66,6 +70,7 @@ function fillForm(p){
   setCanToForm(p.can || {});
   qs("#btnDelete").style.display = "inline-flex";
   qs("#btnCancel").style.display = "inline-flex";
+  qs("#btnSubmit").textContent = "Guardar cambios";
   updateNavInfo();
 }
 
@@ -101,6 +106,10 @@ function updateNavInfo(){
   else qs("#navInfo").textContent = `${filtered.length || people.length || 0} cargados`;
 }
 
+function statusText(s){
+  qs("#status").textContent = s;
+}
+
 function goPrev(){
   if(!filtered.length) return;
   const idx = currentIndex <= 0 ? filtered.length - 1 : currentIndex - 1;
@@ -125,10 +134,21 @@ qs("#name").addEventListener("blur", ()=>{
   if(g) qs("#sex").value = g;
 });
 
+qs("#name").addEventListener("input", ()=>{
+  if(currentId && normalizeName(qs("#name").value) !== normalizeName(originalName)){
+    qs("#btnSubmit").textContent = "Agregar persona";
+    statusText("Nombre cambiado: se agregará como persona nueva.");
+  }else if(currentId){
+    qs("#btnSubmit").textContent = "Guardar cambios";
+  }
+});
+
 qs("#personForm").addEventListener("submit", async (e)=>{
   e.preventDefault();
+  const submitLabel = qs("#btnSubmit").textContent || "";
+  const addingMode = !currentId || submitLabel.includes("Agregar");
   const person = {
-    id: currentId,
+    id: addingMode ? null : currentId,
     name: qs("#name").value,
     familyGroup: qs("#familyGroup").value,
     sex: qs("#sex").value,
@@ -143,9 +163,15 @@ qs("#personForm").addEventListener("submit", async (e)=>{
   if(!normalizeName(person.name)){ alert("Escribí el nombre."); return; }
   await savePerson(person);
   await reload();
-  const saved = people.find(p=>p.name === normalizeName(person.name));
-  if(saved) fillForm(saved); else clearForm();
-  qs("#status").textContent = "Guardado";
+  if(addingMode){
+    clearForm();
+    qs("#name").focus();
+    statusText(`Agregado: ${normalizeName(person.name)}`);
+  }else{
+    const saved = people.find(p=>p.id === person.id) || people.find(p=>p.name === normalizeName(person.name));
+    if(saved) fillForm(saved); else clearForm();
+    statusText(`Actualizado: ${normalizeName(person.name)}`);
+  }
 });
 
 qs("#btnDelete").addEventListener("click", async ()=>{
@@ -156,6 +182,7 @@ qs("#btnDelete").addEventListener("click", async ()=>{
   await reload();
 });
 qs("#btnCancel").addEventListener("click", clearForm);
+qs("#btnNew").addEventListener("click", ()=>{ clearForm(); qs("#name").focus(); statusText("Modo agregar: cargá la nueva persona."); });
 qs("#btnPrev").addEventListener("click", goPrev);
 qs("#btnNext").addEventListener("click", goNext);
 qs("#btnShowList").addEventListener("click", ()=>showList(true));
