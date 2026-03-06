@@ -7,11 +7,11 @@ mountHeader();
 const urlWeek = new URLSearchParams(location.search).get("week") || "";
 const currentWeek = urlWeek || Storage.get("currentWeekISO", "");
 if(currentWeek) Storage.set("currentWeekISO", currentWeek);
-const nextWeek = addDaysISO(currentWeek, 7);
+const nextWeek = currentWeek ? addDaysISO(currentWeek, 7) : "";
 
 function byType(asg, type){ return asg.find(x=>x.type===type); }
 function rowsByType(asg, types){ return asg.filter(x=>types.includes(x.type)); }
-function esc(s){ return String(s || "—").replace(/[&<>"]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;"}[m])); }
+function esc(s){ return String(s || '—').replace(/[&<>"]/g, m=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m])); }
 
 function rowHtml({time="", topic="", assigned="", helper="", number="", single=false}){
   const assignHtml = helper || number
