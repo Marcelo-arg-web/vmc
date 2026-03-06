@@ -24,6 +24,13 @@ function guessSexByName(fullName){
   return "";
 }
 
+
+function findExistingByName(name){
+  const target = normalizeName(name || "").toLowerCase();
+  if(!target) return null;
+  return people.find(p => normalizeName(p.name || "").toLowerCase() === target) || null;
+}
+
 function showList(v){
   qs("#listCard").style.display = v ? "block" : "none";
   qs("#btnShowList").style.display = v ? "none" : "inline-flex";
@@ -129,26 +136,40 @@ async function reload(){
 }
 
 qs("#name").addEventListener("blur", ()=>{
-  if(qs("#sex").value) return;
-  const g = guessSexByName(qs("#name").value);
-  if(g) qs("#sex").value = g;
+  const entered = qs("#name").value;
+  if(!qs("#sex").value){
+    const g = guessSexByName(entered);
+    if(g) qs("#sex").value = g;
+  }
+  const existing = findExistingByName(entered);
+  if(existing && existing.id !== currentId){
+    fillForm(existing);
+    statusText(`Ese nombre ya existe. Abrí la persona cargada para editarla.`);
+  }
 });
 
 qs("#name").addEventListener("input", ()=>{
-  if(currentId && normalizeName(qs("#name").value) !== normalizeName(originalName)){
-    qs("#btnSubmit").textContent = "Agregar persona";
-    statusText("Nombre cambiado: se agregará como persona nueva.");
-  }else if(currentId){
+  const typed = qs("#name").value;
+  const existing = findExistingByName(typed);
+  if(existing && existing.id !== currentId){
     qs("#btnSubmit").textContent = "Guardar cambios";
+    statusText("Ese nombre ya existe. Se editará la persona cargada, no se duplicará.");
+    return;
+  }
+  if(currentId){
+    qs("#btnSubmit").textContent = "Guardar cambios";
+  }else{
+    qs("#btnSubmit").textContent = "Agregar persona";
   }
 });
 
 qs("#personForm").addEventListener("submit", async (e)=>{
   e.preventDefault();
-  const submitLabel = qs("#btnSubmit").textContent || "";
-  const addingMode = !currentId || submitLabel.includes("Agregar");
+  const duplicate = findExistingByName(qs("#name").value);
+  const editingExisting = duplicate && duplicate.id !== currentId ? duplicate.id : currentId;
+  const addingMode = !editingExisting;
   const person = {
-    id: addingMode ? null : currentId,
+    id: editingExisting || null,
     name: qs("#name").value,
     familyGroup: qs("#familyGroup").value,
     sex: qs("#sex").value,
@@ -161,6 +182,9 @@ qs("#personForm").addEventListener("submit", async (e)=>{
     notes: qs("#notes").value
   };
   if(!normalizeName(person.name)){ alert("Escribí el nombre."); return; }
+  if(duplicate && duplicate.id !== currentId){
+    statusText("Ese nombre ya existía. Se guardaron cambios sobre la persona existente.");
+  }
   await savePerson(person);
   await reload();
   if(addingMode){
