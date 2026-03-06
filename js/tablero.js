@@ -24,7 +24,7 @@ function songLabel(num){
   if(!raw) return 'Canción —';
   const m = raw.match(/(\d{1,3})/);
   const n = m ? Number(m[1]) : NaN;
-  const title = Number.isFinite(n) ? cancionesMap[n] : '';
+  const title = Number.isFinite(n) ? (cancionesMap[n] || cancionesMap[String(n)]) : '';
   return title ? `Canción ${n}: ${title}` : `Canción ${raw}`;
 }
 
@@ -111,34 +111,67 @@ function buildWeekSheet(weekISO, app, w, asg){
 
 async function exportBoardAsImage(){
   const board = qs('#board');
-  const styles = Array.from(document.querySelectorAll('style,link[rel="stylesheet"]')).map(el=>el.outerHTML).join('');
-  const clone = board.cloneNode(true);
-  const wrapper = document.createElement('div');
-  wrapper.appendChild(clone);
-  const html = `<!doctype html><html><head><meta charset="utf-8">${styles}</head><body class="image-exporting">${wrapper.innerHTML}</body></html>`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="${Math.ceil(board.scrollHeight * 1400 / board.scrollWidth)}"><foreignObject width="100%" height="100%">${html.replace(/&/g, '&amp;').replace(/#/g, '%23')}</foreignObject></svg>`;
-  const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const img = new Image();
-  img.onload = ()=>{
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(img,0,0);
-    URL.revokeObjectURL(url);
-    canvas.toBlob(blob=>{
+  try {
+    if (window.html2canvas) {
+      const canvas = await window.html2canvas(board, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: document.documentElement.scrollWidth,
+      });
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
+      a.href = canvas.toDataURL('image/png');
       a.download = `tablero_${currentWeek || 'semana'}.png`;
       a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-    }, 'image/png');
-  };
-  img.onerror = ()=>{ URL.revokeObjectURL(url); alert('No se pudo generar la imagen en este navegador.'); };
-  img.src = url;
+      return;
+    }
+  } catch (err) {
+    console.error('html2canvas falló', err);
+  }
+
+  try {
+    const cloned = board.cloneNode(true);
+    inlineComputedStyles(board, cloned);
+    const wrapper = document.createElement('div');
+    wrapper.style.background = '#fff';
+    wrapper.appendChild(cloned);
+    const data = new XMLSerializer().serializeToString(wrapper);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(board.scrollWidth)}" height="${Math.ceil(board.scrollHeight)}"><foreignObject width="100%" height="100%">${data}</foreignObject></svg>`;
+    const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = ()=>{
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * 2;
+      canvas.height = img.height * 2;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(2,2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0,0,img.width,img.height);
+      ctx.drawImage(img,0,0);
+      URL.revokeObjectURL(url);
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `tablero_${currentWeek || 'semana'}.png`;
+      a.click();
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); alert('No se pudo generar la imagen en este navegador.'); };
+    img.src = url;
+  } catch (err) {
+    console.error(err);
+    alert('No se pudo generar la imagen en este navegador.');
+  }
+}
+
+function inlineComputedStyles(sourceNode, targetNode){
+  const sourceChildren = sourceNode.children || [];
+  const targetChildren = targetNode.children || [];
+  const style = window.getComputedStyle(sourceNode);
+  targetNode.setAttribute('style', Array.from(style).map(p => `${p}:${style.getPropertyValue(p)};`).join(' '));
+  for(let i=0;i<sourceChildren.length;i++){
+    inlineComputedStyles(sourceChildren[i], targetChildren[i]);
+  }
 }
 
 async function load(){
