@@ -1,46 +1,38 @@
-# Planificador VMC (GitHub Pages)
+# Arreglos Discursos · Villa Fiad (GitHub Pages + Firebase)
 
-Sistema web independiente para planificar la reunión de entre semana (Vida y Ministerio Cristiano).
+Este paquete es un sitio **estático** (HTML/CSS/JS) listo para **GitHub Pages** y **Firebase (Auth + Firestore)**.
 
-## Qué hace
-- Pegás el link semanal de WOL y el sistema intenta detectar las partes.
-- Sugiere asignados con rotación “pareja” usando historial.
-- Permite edición manual (títulos, reemplazos, etc.).
-- Guarda en Firestore.
-- Genera tablero tipo “S-140” y exporta PNG para WhatsApp + opción imprimir.
+## 1) Configurar Firebase
+1. Firebase Console → Authentication → Sign-in method → habilitar **Email/Password**
+2. Authentication → Settings → Authorized domains → agregar:
+   - `localhost`
+   - `tu-proyecto.web.app` (si usás hosting)
+   - `marcelo-arg-web.github.io` (GitHub Pages)
+3. Firestore → Reglas → pegar el archivo `firestore.rules`
 
-## Pasos rápidos
-1) Crear proyecto en Firebase
-   - Authentication: Email/Password (crear un usuario)
-   - Firestore: crear base de datos
+## 2) Pegar tu configuración del SDK
+Editar: `js/firebase-config.js` y pegar tu config (apiKey, authDomain, projectId, etc).
 
-2) Pegar `firebaseConfig` en `Configuración` (settings.html)
+## 3) Estructura de datos
+- `/usuarios/{uid}` → `activo: true/false`, `rol: viewer/editor/admin/superadmin`, `nombre`, `email`
+- `/personas` → hermanos con roles (microfonista, audio, etc.)
+- `/asignaciones` → semanas con roles
+- `/visitas` → discursantes visitantes / salidas
 
-3) Login
+## 4) Flujo recomendado
+1. Entrás como superadmin (tu usuario debe existir en `/usuarios/{tuUid}` con `activo=true` y `rol=superadmin`).
+2. Cargás personas.
+3. Cargás asignaciones semanales.
+4. Vas a **Imprimir** y sacás el tablero mensual.
 
-4) Cargar Personas (sexo/rol/aprobados)
+## 5) Importar Asignaciones.xlsx
+Página: `importar.html` (solo para rol `editor` o superior).
+Usa SheetJS (CDN) y mapeo rápido por nombre de columnas.
 
-5) Semana → pegar link WOL → Cargar → Sugerir → Guardar
+---
 
-## Firestore (reglas sugeridas)
-Estas son reglas básicas para que SOLO usuarios logueados puedan leer/escribir:
+Generado: 2026-02-27
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
 
-> Luego podés endurecerlo por roles si querés.
-
-## Proxy (si falla WOL)
-Por defecto usa `https://r.jina.ai/http://...` (evita CORS).
-Si un día falla, podés crear un proxy (Cloudflare Worker) y ponerlo en Configuración:
-
-Ejemplo (worker):
-- `https://TU-WORKER.workers.dev/?url=`
+## Nota
+Los scripts de páginas están en `js/pages/`.

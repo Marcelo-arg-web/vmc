@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>VMC semanal · Villa Fiad</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg"/>
+<link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body class="has-topbar">
+<div id="topbar"></div>
+<div class="container">
+  <div class="row" style="align-items:flex-start;">
+    <div class="col-2">
+      <div class="card pad">
+        <div class="section-title">
+          <h2 class="h1" style="margin:0;">Vida y Ministerio Cristianos</h2>
+          <span class="pill">Formulario semanal</span>
+        </div>
+        <div class="muted" style="margin-top:-4px;">Pensado para asignar por reglas: presidente, tesoros, estudiantes, vida cristiana y estudio bíblico.</div>
+        <div class="hr"></div>
+
+        <div class="grid three">
+          <div class="field">
+            <div class="label">Semana</div>
+            <input id="semana" class="input" type="date"/>
+            <div class="help">Usá la fecha de la reunión de entre semana.</div>
+          </div>
+          <div class="field">
+            <div class="label">Acciones rápidas</div>
+            <div class="row">
+              <button class="btn small" id="btnEstaSemana" type="button">Esta semana</button>
+              <button class="btn small" id="btnAnterior" type="button">◀ Semana anterior</button>
+              <button class="btn small" id="btnSiguiente" type="button">Semana siguiente ▶</button>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <button class="btn small" id="btnCargar" type="button">Cargar</button>
+              <button class="btn small danger" id="btnLimpiar" type="button">Limpiar</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="label">Lectura bíblica</div>
+            <input id="lecturaSemana" class="input" placeholder="Ej: Isaías 41, 42"/>
+            <div class="help">Opcional, para impresión.</div>
+          </div>
+        </div>
+
+        <div class="notice" id="status" style="display:none; margin-top:10px;"></div>
+
+        <div class="hr"></div>
+        <div class="section-title"><h3>Encabezado</h3><span class="pill">Inicio y cierre</span></div>
+        <div class="grid three">
+          <div class="field">
+            <div class="label">Presidente</div>
+            <select id="presidente"></select>
+          </div>
+          <div class="field">
+            <div class="label">Oración inicial</div>
+            <select id="oracionInicial"></select>
+          </div>
+          <div class="field">
+            <div class="label">Palabras de introducción</div>
+            <input id="introMin" class="input" value="1 min"/>
+          </div>
+        </div>
+        <div class="grid three">
+          <div class="field"><div class="label">Canción inicial</div><input id="cancionInicial" class="input" placeholder="Ej: 8"/></div>
+          <div class="field"><div class="label">Canción intermedia</div><input id="cancionMedia" class="input" placeholder="Ej: 19"/></div>
+          <div class="field"><div class="label">Canción final</div><input id="cancionFinal" class="input" placeholder="Ej: 110"/></div>
+        </div>
+
+        <div class="hr"></div>
+        <div class="section-title"><h3>Tesoros de la Biblia</h3><span class="pill">Ancianos / siervos</span></div>
+        <div class="grid two">
+          <div class="field"><div class="label">Tema del discurso</div><input id="tesorosTema" class="input" placeholder='Ej: “No tengas miedo”'/></div>
+          <div class="field"><div class="label">Discurso de tesoros</div><select id="tesorosAsignado"></select></div>
+        </div>
+        <div class="grid three">
+          <div class="field"><div class="label">Busquemos perlas escondidas</div><select id="perlasAsignado"></select></div>
+          <div class="field"><div class="label">Lectura de la Biblia (pasaje)</div><input id="lecturaPasaje" class="input" placeholder="Ej: Is 42:1-13"/></div>
+          <div class="field"><div class="label">Lectura de la Biblia (asignado)</div><select id="lecturaAsignado"></select></div>
+        </div>
+
+        <div class="hr"></div>
+        <div class="section-title"><h3>Seamos mejores maestros</h3><span class="pill">3 partes dinámicas</span></div>
+        <div id="smmHost"></div>
+
+        <div class="hr"></div>
+        <div class="section-title"><h3>Nuestra vida cristiana</h3><span class="pill">1 o 2 partes</span></div>
+        <div id="nvcHost"></div>
+
+        <div class="hr"></div>
+        <div class="section-title"><h3>Estudio bíblico de la congregación</h3><span class="pill">Cierre de reunión</span></div>
+        <div class="grid three">
+          <div class="field"><div class="label">Publicación / lección</div><input id="ebcMaterial" class="input" placeholder="Ej: lfb lecciones 66, 67"/></div>
+          <div class="field"><div class="label">Conductor</div><select id="ebcConductor"></select></div>
+          <div class="field"><div class="label">Lector</div><select id="ebcLector"></select></div>
+        </div>
+        <div class="grid two">
+          <div class="field"><div class="label">Palabras de conclusión</div><input id="conclusionMin" class="input" value="3 min"/></div>
+          <div class="field"><div class="label">Oración final</div><select id="oracionFinal"></select></div>
+        </div>
+
+        <div class="hr"></div>
+        <div class="row no-print" style="justify-content:flex-end;">
+          <button class="btn" id="btnImprimir" type="button">Imprimir / PDF</button>
+          <button class="btn primary" id="btnGuardar" type="button">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card pad">
+        <div class="section-title"><h3>Vista rápida</h3><span class="pill">Se actualiza sola</span></div>
+        <div class="muted">Las listas se filtran según el perfil VMC de Personas. Si una lista queda vacía, completá o ajustá la persona desde <b>Personas</b>.</div>
+        <div class="hr"></div>
+        <div id="preview"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="print-only" id="printVmc"></div>
+<script>
+(function(){
+  if(!('serviceWorker' in navigator)) return;
+  let refreshing = false;
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./sw.js').then(function(reg){
+      if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
+      reg.addEventListener('updatefound', function(){
+        var nw = reg.installing;
+        if(!nw) return;
+        nw.addEventListener('statechange', function(){
+          if(nw.state === 'installed' && navigator.serviceWorker.controller){
+            nw.postMessage({type:'SKIP_WAITING'});
+          }
+        });
+      });
+    }).catch(function(e){ console.log('SW error', e); });
+
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(refreshing) return;
+      refreshing = true;
+      location.reload();
+    });
+  });
+})();
+</script>
+<script type="module" src="js/pages/vmc.js?v=20260305"></script>
+<script src="js/nav-mobile.js"></script>
+</body>
+</html>
