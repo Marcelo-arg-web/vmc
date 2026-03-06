@@ -1,5 +1,61 @@
 import { markUnsaved } from "./app.js";
 
+const AUTO_WOL_BASE = {
+  anchorISO: "2026-04-02",
+  anchorCode: 202026085,
+  urlPrefix: "https://wol.jw.org/es/wol/d/r4/lp-s/"
+};
+
+function parseISODate(iso){
+  const [y,m,d] = (iso || "").split("-").map(Number);
+  if(!y || !m || !d) return null;
+  return new Date(y, m-1, d);
+}
+
+function isoFromDate(d){
+  const year = d.getFullYear();
+  const month = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeToMeetingWeekThursday(iso){
+  const d = parseISODate(iso);
+  if(!d) return null;
+  const jsDay = d.getDay();
+  const mondayBased = (jsDay + 6) % 7;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - mondayBased);
+  const thursday = new Date(monday);
+  thursday.setDate(monday.getDate() + 3);
+  return thursday;
+}
+
+export function predictWOLUrlFromWeekISO(weekISO){
+  const targetThursday = normalizeToMeetingWeekThursday(weekISO);
+  const anchorThursday = parseISODate(AUTO_WOL_BASE.anchorISO);
+  if(!targetThursday || !anchorThursday) return "";
+  if(targetThursday < anchorThursday) return "";
+  const diffWeeks = Math.round((targetThursday - anchorThursday) / 604800000);
+  const code = AUTO_WOL_BASE.anchorCode + diffWeeks;
+  return `${AUTO_WOL_BASE.urlPrefix}${code}`;
+}
+
+export function buildFetchCandidates(wolUrl, proxyBase) {
+  const clean = (wolUrl || "").trim();
+  if (!clean) return [];
+  const noProto = clean.replace(/^https?:\/\//i, "");
+  const encoded = encodeURIComponent(clean);
+  const out = [];
+  const add = (u) => { if (u && !out.includes(u)) out.push(u); };
+  if (proxyBase) add(proxyBase + encoded);
+  add(clean);
+  add(`https://api.allorigins.win/raw?url=${encoded}`);
+  add(`https://api.allorigins.win/get?url=${encoded}`);
+  add(`https://r.jina.ai/http://${noProto}`);
+  return out;
+}
+
 function compact(s) {
   return (s || "").replace(/[ \t]+/g, " ").trim();
 }
@@ -23,6 +79,7 @@ function cleanText(raw) {
   return (raw || "")
     .replace(/\r/g, "")
     .replace(/\u00a0/g, " ")
+    .replace(/【\d+†[^\]]*】/g, " ")
     .replace(/【\d+†[^】]*】/g, " ")
     .replace(/【\d+】/g, " ")
     .replace(/\[[^\]]*\]\((?:https?:\/\/)?[^)]+\)/g, " ")
@@ -37,6 +94,7 @@ function textFromHTML(html) {
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "");
 
+  // Convertir algunos bloques a saltos de línea para no perder estructura.
   const structural = withoutScripts
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|section|article|h1|h2|h3|h4|h5|h6|li)>/gi, "\n")
@@ -54,8 +112,9 @@ function getLines(text) {
 }
 
 function parseReading(lines) {
+  // Preferir el encabezado semanal: ISAÍAS 43, 44
   for (const line of lines) {
-    if (/^[1-3]?\s?[A-ZÁÉÍÓÚÑ]+\s+\d+(?:\s*,\s*\d+)?$/.test(line)) {
+    if (/^[1-3]?\s?[A-ZÁÉÍÓÚÑ]+\s+\d+[,:]?\s*\d*/.test(line)) {
       return titleCaseBible(line.replace(/\s+/g, " "));
     }
   }
@@ -176,7 +235,7 @@ function parseStudentParts(lines) {
       if (/^(\d+)\.?\s+/.test(next)) break;
       if (!minutes && /\(\d+\s*min/i.test(next)) minutes = parseMinutes(next);
       if (!detail && !/\(\d+\s*min/i.test(next)) detail = compact(next);
-      else if (detail && !/\(\d+\s*min/i.test(next)) detail += " " + compact(next);
+      else if (detail && !/\(\d+\s*min/i.test(next))) detail += " " + compact(next);
     }
 
     parts.push({
@@ -240,48 +299,33 @@ function parseVidaCristiana(lines) {
   return { parts, ebcTitle };
 }
 
-function extractRawText(raw) {
-  let text = raw;
-  try {
-    const parsed = JSON.parse(raw);
-    if (typeof parsed?.contents === "string") {
-      text = parsed.contents;
-    } else if (typeof parsed?.body === "string") {
-      text = parsed.body;
-    }
-  } catch {
-    // No era JSON; seguir con el texto original.
-  }
-  return /<html/i.test(text) ? textFromHTML(text) : cleanText(text);
-}
-
-function buildCandidateFetches(wolUrl, proxyBase) {
-  const clean = (wolUrl || "").trim();
-  const urls = [];
-  if (proxyBase) urls.push(proxyBase + encodeURIComponent(clean));
-  urls.push(clean);
-  urls.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(clean)}`);
-  urls.push(`https://api.allorigins.win/get?url=${encodeURIComponent(clean)}`);
-  urls.push(`https://r.jina.ai/http://${clean.replace(/^https?:\/\//i, "")}`);
-  return Array.from(new Set(urls.filter(Boolean)));
-}
-
 export async function fetchAndParseWOL({ wolUrl, proxyBase = null }) {
-  const clean = (wolUrl || "").trim();
-  if (!clean) throw new Error("Pegá un link de WOL.");
+  const candidates = buildFetchCandidates(wolUrl, proxyBase);
+  if (!candidates.length) throw new Error("Pegá un link de WOL.");
 
   let raw = "";
   let lastErr = null;
-  const candidates = buildCandidateFetches(clean, proxyBase);
 
   for (const candidate of candidates) {
     try {
-      const res = await fetch(candidate, { method: "GET" });
+      const res = await fetch(candidate);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const candidateRaw = await res.text();
-      if (!candidateRaw) throw new Error("Respuesta vacía");
-      raw = candidateRaw;
-      break;
+      const contentType = res.headers.get("content-type") || "";
+      const body = await res.text();
+      if (!body) throw new Error("Respuesta vacía");
+
+      if (contentType.includes("application/json") || /^\s*\{/.test(body)) {
+        try {
+          const parsed = JSON.parse(body);
+          raw = parsed.contents || parsed.body || parsed.html || parsed.data || "";
+        } catch {
+          raw = body;
+        }
+      } else {
+        raw = body;
+      }
+
+      if (raw) break;
     } catch (err) {
       lastErr = err;
     }
@@ -289,7 +333,7 @@ export async function fetchAndParseWOL({ wolUrl, proxyBase = null }) {
 
   if (!raw) throw new Error(lastErr?.message || "No se pudo leer WOL.");
 
-  const text = extractRawText(raw);
+  const text = /<html/i.test(raw) ? textFromHTML(raw) : cleanText(raw);
   const lines = getLines(text);
 
   const reading = parseReading(lines);

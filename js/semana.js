@@ -1,6 +1,6 @@
 import { qs, qsa, Storage, todayISO, fmtDateAR, fmtDayChip, dayNameFromISO, monthWeekOptions, addDaysISO, markUnsaved, requireSavedGuard } from "./app.js";
 import { mountHeader } from "./ui_common.js";
-import { fetchAndParseWOL } from "./wol.js";
+import { fetchAndParseWOL, predictWOLUrlFromWeekISO } from "./wol.js";
 import { loadPeople, loadWeek, saveWeek, loadAssignments, saveAssignments, appendHistoryFromWeek, loadRecentHistory, loadAppSettings } from "./data.js";
 import { Rules, scoreCandidate } from "./rules.js";
 
@@ -16,6 +16,8 @@ const fields = {
 const partsBox = qs("#partsBox");
 const asgBox = qs("#asgBox");
 const msg = qs("#msg");
+const btnAutoWOL = qs("#btnAutoWOL");
+const wolAutoHint = qs("#wolAutoHint");
 
 let people = [];
 let parts = [];
@@ -45,6 +47,28 @@ function isNoMeeting(){ return ["asamblea","conmemoracion","sin_reunion"].includ
 function isTravelerVisit(){ return fields.weekType.value === "visita"; }
 function setWeekPretty(){ qs("#weekPretty").textContent = fmtDateAR(weekInput.value); }
 
+function refreshAutoWOLHint(){
+  const predicted = predictWOLUrlFromWeekISO(weekInput.value);
+  if(predicted){
+    wolAutoHint.textContent = `Sugerido automáticamente desde abril de 2026: ${predicted}`;
+    btnAutoWOL.disabled = false;
+  } else {
+    wolAutoHint.textContent = "La sugerencia automática de enlaces está preparada desde abril de 2026.";
+    btnAutoWOL.disabled = true;
+  }
+}
+
+function applyPredictedWOL(force=false){
+  const predicted = predictWOLUrlFromWeekISO(weekInput.value);
+  if(!predicted) return false;
+  if(force || !fields.wolLink.value.trim() || fields.wolLink.dataset.auto === "1") {
+    fields.wolLink.value = predicted;
+    fields.wolLink.dataset.auto = "1";
+    return true;
+  }
+  return false;
+}
+
 function showToast(text){
   let el = qs("#toast");
   if(!el){
@@ -65,6 +89,7 @@ function gotoWeek(newISO){
   Storage.set("currentWeekISO", newISO);
   setWeekPretty();
   renderWeekChips();
+  refreshAutoWOLHint();
   loadAll();
 }
 
@@ -80,12 +105,13 @@ function renderWeekChips(){
 weekInput.value = Storage.get("currentWeekISO", todayISO());
 setWeekPretty();
 renderWeekChips();
+refreshAutoWOLHint();
 weekInput.addEventListener("change", ()=> gotoWeek(weekInput.value));
 qs("#btnPrevWeek").addEventListener("click", ()=> gotoWeek(addDaysISO(weekInput.value, -7)));
 qs("#btnNextWeek").addEventListener("click", ()=> gotoWeek(addDaysISO(weekInput.value, 7)));
 
 for(const el of Object.values(fields)){
-  el.addEventListener("input", ()=>markUnsaved("Se modificó la semana."));
+  el.addEventListener("input", ()=>{ if(el===fields.wolLink) fields.wolLink.dataset.auto = "0"; markUnsaved("Se modificó la semana."); });
   el.addEventListener("change", ()=>{ markUnsaved("Se modificó la semana."); applyWeekTypeEffects(); });
 }
 
@@ -117,6 +143,7 @@ async function loadAll(){
   assignments = await loadAssignments(weekISO);
 
   fields.wolLink.value = w?.wolUrl || "";
+  fields.wolLink.dataset.auto = w?.wolUrl ? "0" : "";
   fields.meetingDay.value = w?.meetingDay || dayNameFromISO(weekISO);
   fields.meetingTime.value = w?.meetingTime || appSettings.defaultTime || "19:30";
   fields.weekType.value = w?.weekType || "normal";
@@ -131,6 +158,8 @@ async function loadAll(){
 
   maybeApplyNoMeetingDefaults();
   applyAppDefaults();
+  applyPredictedWOL(false);
+  refreshAutoWOLHint();
   applyWeekTypeEffects(false);
   renderParts();
   renderAssignments();
@@ -319,8 +348,22 @@ async function suggest(){
   show("Sugerencias aplicadas. Revisá y ajustá lo necesario.");
 }
 
+btnAutoWOL?.addEventListener("click", ()=>{
+  if(applyPredictedWOL(true)){
+    markUnsaved("Se sugirió el enlace de WOL.");
+    show("Se completó el enlace de WOL según la semana elegida.");
+    refreshAutoWOLHint();
+  } else {
+    show("No hay una regla automática disponible para esa fecha.", "warn");
+  }
+});
+
 qs("#btnLoadWOL").addEventListener("click", async ()=>{
-  const wolUrl = fields.wolLink.value.trim();
+  let wolUrl = fields.wolLink.value.trim();
+  if(!wolUrl){
+    applyPredictedWOL(true);
+    wolUrl = fields.wolLink.value.trim();
+  }
   if(!wolUrl) return show("Pegá el link de WOL.", "warn");
   try{
     const result = await fetchAndParseWOL({ wolUrl, proxyBase: Storage.get("proxyBase", "") || null });
