@@ -1,6 +1,12 @@
 import { qs, Storage, fmtDateTitle, addDaysISO } from "./app.js";
 import { mountHeader } from "./ui_common.js";
 import { loadWeek, loadAssignments, loadAppSettings } from "./data.js";
+import { canciones as cancionesImportadas } from "./canciones.js";
+
+const cancionesMap = (() => {
+  const globalMap = (typeof window !== "undefined" && (window.canciones || window.CANCIONES)) || {};
+  return { ...globalMap, ...cancionesImportadas };
+})();
 
 mountHeader();
 
@@ -12,6 +18,15 @@ const nextWeek = currentWeek ? addDaysISO(currentWeek, 7) : "";
 function byType(asg, type){ return asg.find(x=>x.type===type); }
 function rowsByType(asg, types){ return asg.filter(x=>types.includes(x.type)); }
 function esc(s){ return String(s || '—').replace(/[&<>"]/g, m=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m])); }
+
+function songLabel(num){
+  const raw = String(num || '').trim();
+  if(!raw) return 'Canción —';
+  const m = raw.match(/(\d{1,3})/);
+  const n = m ? Number(m[1]) : NaN;
+  const title = Number.isFinite(n) ? cancionesMap[n] : '';
+  return title ? `Canción ${n}: ${title}` : `Canción ${raw}`;
+}
 
 function rowHtml({time="", topic="", assigned="", helper="", number="", single=false}){
   const assignHtml = helper || number
@@ -48,7 +63,7 @@ function buildWeekSheet(weekISO, app, w, asg){
   const lector = byType(asg, "Lector EBC");
 
   const inicioRows = [
-    rowHtml({time:w.meetingTime || '19:30', topic:`Canción ${w.openingSong || '—'}`, assigned:''}),
+    rowHtml({time:w.meetingTime || '19:30', topic:songLabel(w.openingSong), assigned:''}),
     rowHtml({topic:'Palabras de introducción (1 min.)', assigned:pres}),
   ];
 
@@ -66,11 +81,11 @@ function buildWeekSheet(weekISO, app, w, asg){
   })) : [rowHtml({topic:'Sin asignaciones estudiantiles detectadas', assigned:''})];
 
   const vidaRows = [
-    rowHtml({topic:`Canción ${w.middleSong || '—'}`, assigned:''}),
+    rowHtml({topic:songLabel(w.middleSong), assigned:''}),
     ...(vida.length ? vida.map(r=>rowHtml({topic:`${r.title || r.type}${r.minutes ? ` (${r.minutes} mins.)` : ''}`, assigned:r.person1Name})) : [rowHtml({topic:'Sin parte previa al estudio', assigned:''})]),
     ...(conductor ? [rowHtml({topic:`${conductor.title || 'Estudio bíblico de la congregación'} (${conductor.minutes || 30} mins.)`, assigned: conductor.person1Name, helper: lector?.person1Name, number:'L'})] : []),
     rowHtml({topic:'Repaso de esta reunión, adelanto de la próxima y anuncios (3 mins.)', assigned:pres}),
-    rowHtml({topic:`Canción ${w.closingSong || '—'}`, assigned:or2}),
+    rowHtml({topic:songLabel(w.closingSong), assigned:''}),
   ];
 
   return `
