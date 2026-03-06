@@ -1,13 +1,5 @@
 import { markUnsaved } from "./app.js";
 
-export function buildFetchUrl(wolUrl, proxyBase) {
-  const clean = (wolUrl || "").trim();
-  if (!clean) return null;
-  if (proxyBase) return proxyBase + encodeURIComponent(clean);
-  // r.jina.ai suele ser la opción más estable para páginas de WOL desde GitHub Pages
-  return "https://r.jina.ai/http://" + clean.replace(/^https?:\/\//i, "");
-}
-
 function compact(s) {
   return (s || "").replace(/[ \t]+/g, " ").trim();
 }
@@ -31,7 +23,6 @@ function cleanText(raw) {
   return (raw || "")
     .replace(/\r/g, "")
     .replace(/\u00a0/g, " ")
-    .replace(/【\d+†[^\]]*】/g, " ")
     .replace(/【\d+†[^】]*】/g, " ")
     .replace(/【\d+】/g, " ")
     .replace(/\[[^\]]*\]\((?:https?:\/\/)?[^)]+\)/g, " ")
@@ -46,7 +37,6 @@ function textFromHTML(html) {
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "");
 
-  // Convertir algunos bloques a saltos de línea para no perder estructura.
   const structural = withoutScripts
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|section|article|h1|h2|h3|h4|h5|h6|li)>/gi, "\n")
@@ -64,9 +54,8 @@ function getLines(text) {
 }
 
 function parseReading(lines) {
-  // Preferir el encabezado semanal: ISAÍAS 43, 44
   for (const line of lines) {
-    if (/^[1-3]?\s?[A-ZÁÉÍÓÚÑ]+\s+\d+[,:]?\s*\d*/.test(line)) {
+    if (/^[1-3]?\s?[A-ZÁÉÍÓÚÑ]+\s+\d+(?:\s*,\s*\d+)?$/.test(line)) {
       return titleCaseBible(line.replace(/\s+/g, " "));
     }
   }
@@ -187,7 +176,7 @@ function parseStudentParts(lines) {
       if (/^(\d+)\.?\s+/.test(next)) break;
       if (!minutes && /\(\d+\s*min/i.test(next)) minutes = parseMinutes(next);
       if (!detail && !/\(\d+\s*min/i.test(next)) detail = compact(next);
-      else if (detail && !/\(\d+\s*min/i.test(next))) detail += " " + compact(next);
+      else if (detail && !/\(\d+\s*min/i.test(next)) detail += " " + compact(next);
     }
 
     parts.push({
@@ -251,24 +240,48 @@ function parseVidaCristiana(lines) {
   return { parts, ebcTitle };
 }
 
+function extractRawText(raw) {
+  let text = raw;
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.contents === "string") {
+      text = parsed.contents;
+    } else if (typeof parsed?.body === "string") {
+      text = parsed.body;
+    }
+  } catch {
+    // No era JSON; seguir con el texto original.
+  }
+  return /<html/i.test(text) ? textFromHTML(text) : cleanText(text);
+}
+
+function buildCandidateFetches(wolUrl, proxyBase) {
+  const clean = (wolUrl || "").trim();
+  const urls = [];
+  if (proxyBase) urls.push(proxyBase + encodeURIComponent(clean));
+  urls.push(clean);
+  urls.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(clean)}`);
+  urls.push(`https://api.allorigins.win/get?url=${encodeURIComponent(clean)}`);
+  urls.push(`https://r.jina.ai/http://${clean.replace(/^https?:\/\//i, "")}`);
+  return Array.from(new Set(urls.filter(Boolean)));
+}
+
 export async function fetchAndParseWOL({ wolUrl, proxyBase = null }) {
-  const url = buildFetchUrl(wolUrl, proxyBase);
-  if (!url) throw new Error("Pegá un link de WOL.");
+  const clean = (wolUrl || "").trim();
+  if (!clean) throw new Error("Pegá un link de WOL.");
 
   let raw = "";
   let lastErr = null;
-  const candidates = [url];
-  if (!proxyBase) {
-    const clean = (wolUrl || "").trim();
-    candidates.push(clean);
-  }
+  const candidates = buildCandidateFetches(clean, proxyBase);
 
   for (const candidate of candidates) {
     try {
-      const res = await fetch(candidate);
+      const res = await fetch(candidate, { method: "GET" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      raw = await res.text();
-      if (raw) break;
+      const candidateRaw = await res.text();
+      if (!candidateRaw) throw new Error("Respuesta vacía");
+      raw = candidateRaw;
+      break;
     } catch (err) {
       lastErr = err;
     }
@@ -276,7 +289,7 @@ export async function fetchAndParseWOL({ wolUrl, proxyBase = null }) {
 
   if (!raw) throw new Error(lastErr?.message || "No se pudo leer WOL.");
 
-  const text = /<html/i.test(raw) ? textFromHTML(raw) : cleanText(raw);
+  const text = extractRawText(raw);
   const lines = getLines(text);
 
   const reading = parseReading(lines);
