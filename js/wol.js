@@ -12,26 +12,57 @@ function stripTags(html){
              .replace(/<style[\s\S]*?<\/style>/gi,"");
 }
 
+function stripMarkdownArtifacts(text){
+  return (text||"")
+    .replace(/!\[[^\]]*\]\(([^)]+)\)/g, "")
+    .replace(/\[\*\*([^\]]+?)\*\*\]\(([^)]+)\)/g, "$1")
+    .replace(/\[([^\]]+?)\]\(([^)]+)\)/g, "$1")
+    .replace(/[*_`>#]+/g, "")
+    .replace(/ /g, " ");
+}
+
 function textFromHTML(html){
   const cleaned = stripTags(html);
   const doc = new DOMParser().parseFromString(cleaned, "text/html");
   const text = doc.body ? doc.body.innerText : "";
-  return text.replace(/\r/g,"").replace(/[ \t]+/g," ").replace(/\n{3,}/g,"\n\n");
+  return stripMarkdownArtifacts(text)
+    .replace(//g,"")
+    .replace(/[ 	]+/g," ")
+    .replace(/
+{3,}/g,"
+
+")
+    .trim();
 }
 
-function norm(s){ return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
+function norm(s){ return (s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase(); }
 function compact(s){ return (s||"").replace(/\s+/g," ").trim(); }
 
 function firstMatch(text, re){ const m = re.exec(text); return m ? m[1] || m[0] : ""; }
 
 function parseSongAndPrayer(text){
-  const m = /Cancion\s+(\d+)\s+y\s+oracion\s*\|\s*Palabras de introduccion/i.exec(norm(text));
-  return { openingSong: m ? m[1] : "", closingSong: firstMatch(norm(text), /palabras de conclusion \(3 min\.\) \| cancion\s+(\d+)\s+y\s+oracion/i) || "" };
+  const matches = [...text.matchAll(/canci[oó]n\s+(\d+)/gi)].map(m=>m[1]);
+  const uniq = [];
+  for(const n of matches){ if(!uniq.includes(n)) uniq.push(n); }
+  return {
+    openingSong: uniq[0] || "",
+    middleSong: uniq[1] || "",
+    closingSong: uniq[2] || uniq[uniq.length-1] || ""
+  };
 }
 
-function parseReading(text){
-  const m = /\b([1-3]?\s?[a-záéíóúñ]+\s+[0-9]{1,3}(?::|,)[^\n]+)/i.exec(text);
-  return m ? compact(m[1]) : "";
+function parseReading(text, tesSection=""){
+  const cleanedTes = stripMarkdownArtifacts(tesSection || "");
+  const specific = /3\.\s*Lectura de la Biblia\s*\([^)]*\)\s*([^
+]+)/i.exec(cleanedTes)
+    || /Lectura de la Biblia\s*\([^)]*\)\s*([^
+]+)/i.exec(cleanedTes);
+  if(specific) return compact(specific[1]).replace(/\s*,\s*/g, ", ");
+
+  const cleaned = stripMarkdownArtifacts(text);
+  const m = /([1-3]?\s?[A-Za-zÁÉÍÓÚÑáéíóúñ]+\s+\d{1,3}(?::|,)[^
+|]+)/i.exec(cleaned);
+  return m ? compact(m[1]).replace(/\s*,\s*/g, ", ") : "";
 }
 
 function sectionBetween(text, startText, endTexts=[]){
@@ -47,8 +78,9 @@ function sectionBetween(text, startText, endTexts=[]){
 }
 
 function blockAfterNumber(section, n){
-  const lines = section.split("\n").map(x=>x.trim()).filter(Boolean);
-  const idx = lines.findIndex(l=> new RegExp(`^${n}\\.\\s`).test(l));
+  const lines = section.split("
+").map(x=>x.trim()).filter(Boolean);
+  const idx = lines.findIndex(l=> new RegExp(`^${n}\.\s`).test(l));
   if(idx === -1) return "";
   let out = [lines[idx]];
   for(let i=idx+1;i<lines.length;i++){
@@ -71,7 +103,7 @@ function parseStudentType(title){
 }
 
 function parsePartTitle(block, n){
-  let t = block.replace(new RegExp(`^${n}\\.\\s*`),"").trim();
+  let t = stripMarkdownArtifacts(block).replace(new RegExp(`^${n}\.\s*`),"").trim();
   t = t.replace(/\(\d+\s*mins?\.?(?:utos?)?\)/i,"").trim();
   return compact(t);
 }
@@ -83,13 +115,13 @@ export async function fetchAndParseWOL({ wolUrl, proxyBase=null }){
   if(!res.ok) throw new Error("No se pudo leer WOL.");
   const html = await res.text();
   const text = textFromHTML(html);
-  const songs = parseSongAndPrayer(text);
-  const reading = parseReading(text);
 
   const tes = sectionBetween(text, "TESOROS DE LA BIBLIA", ["SEAMOS MEJORES MAESTROS", "NUESTRA VIDA CRISTIANA"]);
   const maes = sectionBetween(text, "SEAMOS MEJORES MAESTROS", ["NUESTRA VIDA CRISTIANA"]);
   const vida = sectionBetween(text, "NUESTRA VIDA CRISTIANA", ["Palabras de conclusión", "Palabras de conclusion"]);
 
+  const songs = parseSongAndPrayer(text);
+  const reading = parseReading(text, tes);
   const parts = [];
 
   const b1 = blockAfterNumber(tes, 1);
@@ -106,7 +138,6 @@ export async function fetchAndParseWOL({ wolUrl, proxyBase=null }){
     parts.push({ section:"Seamos mejores maestros", type:parseStudentType(title), title, minutes:parseMinutes(b) || "", needsHelper: !/discurso/i.test(norm(title)) });
   }
 
-  // In vida section, 7 and 8 are usually talks, 9 may be EBC
   for(const n of [7,8]){
     const b = blockAfterNumber(vida, n);
     if(!b) continue;
@@ -128,7 +159,7 @@ export async function fetchAndParseWOL({ wolUrl, proxyBase=null }){
     meta: {
       reading,
       openingSong: songs.openingSong,
-      middleSong: firstMatch(norm(vida), /cancion\s+(\d+)/i) || "",
+      middleSong: songs.middleSong,
       closingSong: songs.closingSong
     },
     rawTextSample: text.slice(0, 1500)

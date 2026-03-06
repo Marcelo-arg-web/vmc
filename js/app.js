@@ -1,6 +1,6 @@
 export const APP = {
   name: "Planificador VMC",
-  version: "2.1.0"
+  version: "2.0.0"
 };
 
 export const Storage = {
@@ -82,4 +82,24 @@ export function weeksBetween(aISO, bISO){
   const a = new Date(aISO+"T00:00:00");
   const b = new Date(bISO+"T00:00:00");
   return Math.floor(Math.abs(b - a) / 604800000);
+}
+
+
+export function addDaysISO(iso, days){
+  if(!iso) return "";
+  const [y,m,dd] = iso.split("-").map(Number);
+  const d = new Date(y, m-1, dd);
+  d.setDate(d.getDate() + Number(days || 0));
+  const tz = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return tz.toISOString().slice(0,10);
+}
+
+export function shortWeekLabel(iso, meetingDay=""){
+  if(!iso) return "";
+  const [y,m,dd] = iso.split("-").map(Number);
+  const d = new Date(y, m-1, dd);
+  const wd = (meetingDay || d.toLocaleDateString("es-AR", { weekday:"long" })).trim();
+  const day = d.toLocaleDateString("es-AR", { day:"numeric" });
+  const month = d.toLocaleDateString("es-AR", { month:"long" });
+  return `${wd} ${day} de ${month}`;
 }

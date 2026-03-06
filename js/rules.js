@@ -8,7 +8,7 @@ function isApprovedBrother(p){ return isBrother(p) && p.approved === true; }
 
 export const Rules = {
   allowedFor(partType, person){
-    if(!person || person.active === false) return false;
+    if(person.active === false) return false;
     const can = person.can || {};
     const exact = (key, fallback)=> can[key] === true || (can[key] === undefined && fallback);
 
@@ -39,7 +39,7 @@ export const Rules = {
       case "Lector EBC":
         return exact("lectorEbc", isApprovedBrother(person));
       case "Discurso del viajante":
-        return false;
+        return true;
       default:
         return person.active !== false;
     }
@@ -56,23 +56,17 @@ export const Rules = {
   }
 };
 
-export function summarizeHistoryForPerson(personId, historyByPerson, currentWeekISO){
-  const hist = (historyByPerson[personId] || []).filter(h => (h.weekISO || "") !== currentWeekISO);
-  const sorted = hist.slice().sort((a,b)=>(b.weekISO||"").localeCompare(a.weekISO||""));
-  const last = sorted[0] || null;
-  return {
-    total: hist.length,
-    lastWeekISO: last?.weekISO || "",
-    weeksWithoutParticipation: last ? weeksBetween(last.weekISO, currentWeekISO) : 999
-  };
-}
-
 export function scoreCandidate({person, historyByPerson, currentWeekISO, currentUsedIds=new Set(), partType}){
-  const info = summarizeHistoryForPerson(person.id, historyByPerson, currentWeekISO);
+  const hist = historyByPerson[person.id] || [];
+  let lastAnyWeeks = 999;
+  if(hist.length){
+    const latest = hist.slice().sort((a,b)=>(b.weekISO||"").localeCompare(a.weekISO||""))[0];
+    lastAnyWeeks = weeksBetween(latest.weekISO, currentWeekISO);
+  }
   let score = 0;
-  score -= Math.min(info.weeksWithoutParticipation, 999) * 100;
-  score += info.total * 5;
-  if(currentUsedIds.has(person.id)) score += 100000;
-  if(partType === "Presidente" && person.role === "Anciano") score -= 2;
+  score -= Math.min(lastAnyWeeks, 999) * 10;
+  score += hist.length;
+  if(currentUsedIds.has(person.id)) score += 500;
+  if(partType === "Presidente" && person.role === "Anciano") score -= 5;
   return score;
 }

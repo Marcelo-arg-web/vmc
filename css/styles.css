@@ -50,9 +50,8 @@ a:hover{text-decoration:underline}
 .grid{display:grid; gap:14px}
 .grid.cols-2{grid-template-columns: repeat(2, minmax(0,1fr))}
 .grid.cols-3{grid-template-columns: repeat(3, minmax(0,1fr))}
-.grid.cols-4{grid-template-columns: repeat(4, minmax(0,1fr))}
 @media (max-width: 900px){
-  .grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns: 1fr}
+  .grid.cols-2,.grid.cols-3{grid-template-columns: 1fr}
 }
 
 .card{
@@ -136,7 +135,12 @@ footer{padding:20px 0; color:var(--muted); font-size:12px}
 .table select, .table input{width:100%}
 label.row{align-items:center}
 
-.sectionTitleMini{margin:10px 0 8px; font-size:13px; font-weight:900; color:#111827; border-bottom:2px solid #e5e7eb; padding-bottom:4px}
-.table.compact th, .table.compact td{padding:8px 8px}
-.tiny{font-size:11px; color:var(--muted); margin-top:3px}
-.asg-group + .asg-group{margin-top:12px}
+
+.week-chip{display:inline-flex; margin:6px 0 4px; padding:8px 14px; border-radius:999px; background:linear-gradient(135deg,#1d4ed8,#0f766e); color:#fff; font-weight:800; box-shadow:0 10px 22px rgba(29,78,216,.18)}
+.semana-head{align-items:flex-start}
+.wide-section{padding-bottom:18px}
+.assign-section{margin-top:14px; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fbfdff}
+.assign-section-title{padding:10px 12px; font-size:13px; font-weight:900; letter-spacing:.3px; text-transform:uppercase; color:#0f172a; background:linear-gradient(90deg,#dbeafe,#eef2ff)}
+#asgBox .table{border:none; border-radius:0}
+#asgBox .table th{background:#eff6ff}
+#asgBox .table tr:nth-child(even) td{background:#fcfdff}
