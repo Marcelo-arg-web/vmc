@@ -196,16 +196,17 @@ function parseTesoros(lines, reading) {
     }
 
     if (num === 1) {
-      parts.push({ section: "Tesoros de la Biblia", type: "Tesoros", title, minutes: minutes || 10 });
+      parts.push({ section: "Tesoros de la Biblia", type: "Tesoros", title, minutes: minutes || 10, number: "1" });
     } else if (num === 2) {
-      parts.push({ section: "Tesoros de la Biblia", type: "Perlas", title: "Busquemos perlas escondidas", minutes: minutes || 10 });
+      parts.push({ section: "Tesoros de la Biblia", type: "Perlas", title: "Busquemos perlas escondidas", minutes: minutes || 10, number: "2" });
     } else if (num === 3) {
       parts.push({
         section: "Tesoros de la Biblia",
         type: "Lectura de la Biblia",
         title: `Lectura de la Biblia${detail ? " — " + detail : ""}`,
         minutes: minutes || 4,
-        detail: detail || reading
+        detail: detail || reading,
+        number: "3"
       });
     }
   }
@@ -244,14 +245,18 @@ function parseStudentParts(lines) {
       if (!/\(\d+\s*min/i.test(next)) detailBits.push(compact(next));
     }
 
-    parts.push({
+    const part = {
       section: "Seamos mejores maestros",
       type: parseStudentType(title),
       title,
       minutes,
       detail: compact(detailBits.join(" ")),
-      needsHelper: !/discurso/i.test(title)
-    });
+      needsHelper: !/discurso/i.test(title),
+      number: String(order)
+    };
+
+    const last = parts[parts.length - 1];
+    if (!last || last.number !== part.number) parts.push(part);
   }
   return parts;
 }
@@ -289,15 +294,16 @@ function parseVidaCristiana(lines) {
     const detail = compact(detailBits.join(" "));
     if (n.includes("estudio biblico de la congregacion")) {
       ebcTitle = detail;
-      parts.push({ section: "Nuestra vida cristiana", type: "Conductor EBC", title: "Estudio bíblico de la congregación", minutes: minutes || 30, detail });
-      parts.push({ section: "Nuestra vida cristiana", type: "Lector EBC", title: "Estudio bíblico de la congregación", minutes: minutes || 30, detail });
+      parts.push({ section: "Nuestra vida cristiana", type: "Conductor EBC", title: "Estudio bíblico de la congregación", minutes: minutes || 30, detail, number: String(m[1]) });
+      parts.push({ section: "Nuestra vida cristiana", type: "Lector EBC", title: "Estudio bíblico de la congregación", minutes: minutes || 30, detail, number: String(m[1]) });
     } else {
       parts.push({
         section: "Nuestra vida cristiana",
         type: n.includes("necesidades de la congregacion") ? "Necesidades de la congregación" : "Nuestra vida cristiana",
         title,
         minutes,
-        detail
+        detail,
+        number: String(m[1])
       });
     }
   }
@@ -311,7 +317,30 @@ function parseProgramFromText(rawText) {
   const reading = parseReading(lines);
   const songs = parseSongs(lines);
   const tesoros = parseTesoros(lines, reading);
-  const student = parseStudentParts(lines);
+  let student = parseStudentParts(lines);
+  if (student.length < 4) {
+    const secMatch = text.match(/SEAMOS MEJORES MAESTROS([\s\S]*?)NUESTRA VIDA CRISTIANA/i);
+    if (secMatch) {
+      const block = cleanText(secMatch[1]);
+      const regex = /(?:^|\n)\s*(\d+)\.\s*([^\n]+)\n\s*\((\d+)\s*mins?\.?\)\s*([^\n]*)/gi;
+      const recovered = [];
+      let m;
+      while ((m = regex.exec(block))) {
+        const order = Number(m[1]);
+        if (order < 4) continue;
+        recovered.push({
+          section: "Seamos mejores maestros",
+          type: parseStudentType(compact(m[2])),
+          title: compact(m[2]),
+          minutes: Number(m[3]) || "",
+          detail: compact(m[4]),
+          needsHelper: !/discurso/i.test(m[2]),
+          number: String(order)
+        });
+      }
+      if (recovered.length > student.length) student = recovered;
+    }
+  }
   const vida = parseVidaCristiana(lines);
   return {
     parts: [...tesoros, ...student, ...vida.parts],

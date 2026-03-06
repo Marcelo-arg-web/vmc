@@ -26,12 +26,13 @@ let appSettings = {};
 
 function makeBaseParts(){
   return [
-    { section:"Tesoros de la Biblia", type:"Tesoros", title:"Tesoros de la Biblia", minutes:10 },
-    { section:"Tesoros de la Biblia", type:"Perlas", title:"Busquemos perlas escondidas", minutes:10 },
-    { section:"Tesoros de la Biblia", type:"Lectura de la Biblia", title:"Lectura de la Biblia", minutes:4 },
-    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Empiece conversaciones", minutes:3, needsHelper:true },
-    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Haga revisitas", minutes:4, needsHelper:true },
-    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Explique sus creencias", minutes:5, needsHelper:true },
+    { section:"Tesoros de la Biblia", type:"Tesoros", title:"Tesoros de la Biblia", minutes:10, number:"1" },
+    { section:"Tesoros de la Biblia", type:"Perlas", title:"Busquemos perlas escondidas", minutes:10, number:"2" },
+    { section:"Tesoros de la Biblia", type:"Lectura de la Biblia", title:"Lectura de la Biblia", minutes:4, number:"3" },
+    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Empiece conversaciones", minutes:3, needsHelper:true, number:"4" },
+    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Empiece conversaciones", minutes:3, needsHelper:true, number:"5" },
+    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Explique sus creencias", minutes:5, needsHelper:true, number:"6" },
+    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Haga revisitas", minutes:4, needsHelper:true, number:"7" },
     { section:"Nuestra vida cristiana", type:"Nuestra vida cristiana", title:"Nuestra vida cristiana 1", minutes:10 },
     { section:"Nuestra vida cristiana", type:"Nuestra vida cristiana", title:"Nuestra vida cristiana 2", minutes:10 },
     { section:"Nuestra vida cristiana", type:"Conductor EBC", title:"Estudio bíblico de la congregación", minutes:30 },
@@ -173,7 +174,7 @@ function buildDefaultAssignments(){
   rows.push({ order:++order, key:"presidente", type:"Presidente", title:"Palabras de introducción" });
   rows.push({ order:++order, key:"oracion_inicial", type:"Oración inicial", title:"Oración inicial" });
   for(const [idx, p] of parts.entries()){
-    rows.push({ order:++order, key:`part_${idx+1}_${p.type}`, type:p.type, title:p.title, section:p.section, minutes:p.minutes||"", needsHelper: !!p.needsHelper, detail:p.detail||"", person1Id:"", person1Name:"", person2Id:"", person2Name:"" });
+    rows.push({ order:++order, key:`part_${idx+1}_${p.type}`, type:p.type, title:p.title, section:p.section, minutes:p.minutes||"", needsHelper: !!p.needsHelper, detail:p.detail||"", number:p.number||"", person1Id:"", person1Name:"", person2Id:"", person2Name:"" });
   }
   rows.push({ order:++order, key:"oracion_final", type:"Oración final", title:"Oración final" });
   return rows;

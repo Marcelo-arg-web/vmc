@@ -1,12 +1,7 @@
 import { qs, Storage, fmtDateTitle, addDaysISO } from "./app.js";
 import { mountHeader } from "./ui_common.js";
 import { loadWeek, loadAssignments, loadAppSettings } from "./data.js";
-import { canciones as cancionesImportadas } from "./canciones.js";
-
-const cancionesMap = (() => {
-  const globalMap = (typeof window !== "undefined" && (window.canciones || window.CANCIONES)) || {};
-  return { ...globalMap, ...cancionesImportadas };
-})();
+import { canciones } from "./canciones.js";
 
 mountHeader();
 
@@ -24,15 +19,16 @@ function songLabel(num){
   if(!raw) return 'Canción —';
   const m = raw.match(/(\d{1,3})/);
   const n = m ? Number(m[1]) : NaN;
-  const title = Number.isFinite(n) ? (cancionesMap[n] || cancionesMap[String(n)]) : '';
+  const title = Number.isFinite(n) ? canciones[n] : '';
   return title ? `Canción ${n}: ${title}` : `Canción ${raw}`;
 }
 
-function rowHtml({time="", topic="", assigned="", helper="", number="", single=false}){
-  const assignHtml = helper || number
+function rowHtml({time="", topic="", assigned="", helper="", number="", marker="", single=false}){
+  const assignHtml = helper
     ? `<div class="asg-pair"><div class="asg-main">${esc(assigned || '—')}</div><div class="asg-num">${esc(number || '')}</div><div class="asg-help">${esc(helper || '')}</div></div>`
     : `<div class="asg-solo">${esc(assigned || '—')}</div>`;
-  return `<tr><td class="cell-time">${esc(time)}</td><td class="cell-bullet">•</td><td class="cell-topic">${esc(topic)}</td><td class="cell-assign">${assignHtml}</td></tr>`;
+  const bullet = marker || (number ? String(number) : '•');
+  return `<tr><td class="cell-time">${esc(time)}</td><td class="cell-bullet ${number ? 'is-number' : ''}">${esc(bullet)}</td><td class="cell-topic">${esc(topic)}</td><td class="cell-assign">${assignHtml}</td></tr>`;
 }
 
 function sectionTable(sectionClass, sectionTitle, rows, hint=""){
@@ -64,28 +60,28 @@ function buildWeekSheet(weekISO, app, w, asg){
 
   const inicioRows = [
     rowHtml({time:w.meetingTime || '19:30', topic:songLabel(w.openingSong), assigned:''}),
-    rowHtml({topic:'Palabras de introducción (1 min.)', assigned:pres}),
+    rowHtml({topic:'Palabras de introducción (1 min.)', assigned:pres, marker:'•'}),
   ];
 
   const tesorosRows = [
-    rowHtml({topic:`${tes?.title || 'Tesoros de la Biblia'}${tes?.minutes ? ` (${tes.minutes} mins.)` : ''}`, assigned: tes?.person1Name}),
-    rowHtml({topic:`Busquemos perlas escondidas${per?.minutes ? ` (${per.minutes} mins.)` : ''}`, assigned: per?.person1Name}),
-    rowHtml({topic:`${lec?.title || 'Lectura de la Biblia'}${lec?.minutes ? ` (${lec.minutes} mins.)` : ''}`, assigned: lec?.person1Name, number:'3'}),
+    rowHtml({topic:`${tes?.title || 'Tesoros de la Biblia'}${tes?.minutes ? ` (${tes.minutes} mins.)` : ''}`, assigned: tes?.person1Name, number: tes?.number || '1'}),
+    rowHtml({topic:`Busquemos perlas escondidas${per?.minutes ? ` (${per.minutes} mins.)` : ''}`, assigned: per?.person1Name, number: per?.number || '2'}),
+    rowHtml({topic:`${lec?.title || 'Lectura de la Biblia'}${lec?.minutes ? ` (${lec.minutes} mins.)` : ''}`, assigned: lec?.person1Name, number: lec?.number || '3'}),
   ];
 
   const studentRows = students.length ? students.map((r, idx)=> rowHtml({
     topic:`${r.title || r.type}${r.minutes ? ` (${r.minutes} mins.)` : ''}`,
     assigned:r.person1Name,
     helper:r.person2Name,
-    number:String(idx+4)
+    number:r.number || String(idx+4)
   })) : [rowHtml({topic:'Sin asignaciones estudiantiles detectadas', assigned:''})];
 
   const vidaRows = [
-    rowHtml({topic:songLabel(w.middleSong), assigned:''}),
-    ...(vida.length ? vida.map(r=>rowHtml({topic:`${r.title || r.type}${r.minutes ? ` (${r.minutes} mins.)` : ''}`, assigned:r.person1Name})) : [rowHtml({topic:'Sin parte previa al estudio', assigned:''})]),
-    ...(conductor ? [rowHtml({topic:`${conductor.title || 'Estudio bíblico de la congregación'} (${conductor.minutes || 30} mins.)`, assigned: conductor.person1Name, helper: lector?.person1Name, number:'L'})] : []),
-    rowHtml({topic:'Repaso de esta reunión, adelanto de la próxima y anuncios (3 mins.)', assigned:pres}),
-    rowHtml({topic:songLabel(w.closingSong), assigned:''}),
+    rowHtml({topic:songLabel(w.middleSong), assigned:'', marker:'•'}),
+    ...(vida.length ? vida.map((r, idx)=>rowHtml({topic:`${r.title || r.type}${r.minutes ? ` (${r.minutes} mins.)` : ''}`, assigned:r.person1Name, number: r.number || String(idx + 8)})) : [rowHtml({topic:'Sin parte previa al estudio', assigned:''})]),
+    ...(conductor ? [rowHtml({topic:`${conductor.title || 'Estudio bíblico de la congregación'} (${conductor.minutes || 30} mins.)`, assigned: conductor.person1Name, helper: lector?.person1Name, number:'L', marker: conductor.number || '9'})] : []),
+    rowHtml({topic:'Repaso de esta reunión, adelanto de la próxima y anuncios (3 mins.)', assigned:pres, marker:'•'}),
+    rowHtml({topic:songLabel(w.closingSong), assigned:'', marker:'•'}),
   ];
 
   return `
@@ -111,67 +107,34 @@ function buildWeekSheet(weekISO, app, w, asg){
 
 async function exportBoardAsImage(){
   const board = qs('#board');
-  try {
-    if (window.html2canvas) {
-      const canvas = await window.html2canvas(board, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        windowWidth: document.documentElement.scrollWidth,
-      });
+  const styles = Array.from(document.querySelectorAll('style,link[rel="stylesheet"]')).map(el=>el.outerHTML).join('');
+  const clone = board.cloneNode(true);
+  const wrapper = document.createElement('div');
+  wrapper.appendChild(clone);
+  const html = `<!doctype html><html><head><meta charset="utf-8">${styles}</head><body class="image-exporting">${wrapper.innerHTML}</body></html>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="${Math.ceil(board.scrollHeight * 1400 / board.scrollWidth)}"><foreignObject width="100%" height="100%">${html.replace(/&/g, '&amp;').replace(/#/g, '%23')}</foreignObject></svg>`;
+  const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = ()=>{
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(blob=>{
       const a = document.createElement('a');
-      a.href = canvas.toDataURL('image/png');
+      a.href = URL.createObjectURL(blob);
       a.download = `tablero_${currentWeek || 'semana'}.png`;
       a.click();
-      return;
-    }
-  } catch (err) {
-    console.error('html2canvas falló', err);
-  }
-
-  try {
-    const cloned = board.cloneNode(true);
-    inlineComputedStyles(board, cloned);
-    const wrapper = document.createElement('div');
-    wrapper.style.background = '#fff';
-    wrapper.appendChild(cloned);
-    const data = new XMLSerializer().serializeToString(wrapper);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(board.scrollWidth)}" height="${Math.ceil(board.scrollHeight)}"><foreignObject width="100%" height="100%">${data}</foreignObject></svg>`;
-    const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = ()=>{
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width * 2;
-      canvas.height = img.height * 2;
-      const ctx = canvas.getContext('2d');
-      ctx.scale(2,2);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0,0,img.width,img.height);
-      ctx.drawImage(img,0,0);
-      URL.revokeObjectURL(url);
-      const a = document.createElement('a');
-      a.href = canvas.toDataURL('image/png');
-      a.download = `tablero_${currentWeek || 'semana'}.png`;
-      a.click();
-    };
-    img.onerror = ()=>{ URL.revokeObjectURL(url); alert('No se pudo generar la imagen en este navegador.'); };
-    img.src = url;
-  } catch (err) {
-    console.error(err);
-    alert('No se pudo generar la imagen en este navegador.');
-  }
-}
-
-function inlineComputedStyles(sourceNode, targetNode){
-  const sourceChildren = sourceNode.children || [];
-  const targetChildren = targetNode.children || [];
-  const style = window.getComputedStyle(sourceNode);
-  targetNode.setAttribute('style', Array.from(style).map(p => `${p}:${style.getPropertyValue(p)};`).join(' '));
-  for(let i=0;i<sourceChildren.length;i++){
-    inlineComputedStyles(sourceChildren[i], targetChildren[i]);
-  }
+      setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+    }, 'image/png');
+  };
+  img.onerror = ()=>{ URL.revokeObjectURL(url); alert('No se pudo generar la imagen en este navegador.'); };
+  img.src = url;
 }
 
 async function load(){
