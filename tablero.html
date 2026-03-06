@@ -5,11 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tablero — Planificador VMC</title>
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/board.css">
-
+  <link rel="stylesheet" href="css/board.css" />
 </head>
 <body>
-  <div class="topbar">
+  <div class="topbar no-print">
     <div class="container nav">
       <div class="brand">
         <span id="appName">Planificador VMC</span>
@@ -29,45 +28,37 @@
   </div>
 
   <div class="container">
-    
-<link rel="preconnect" href="https://cdnjs.cloudflare.com">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-<div class="row space no-print">
-  <div>
-    <h2>Tablero</h2>
-    <div class="small">Semana: <b id="weekPretty">—</b></div>
-  </div>
-  <div class="row">
-    <button id="btnPrint" class="secondary">Imprimir</button>
-    <button id="btnPNG">Exportar PNG</button>
-  </div>
-</div>
-
-<div id="boardWrap">
-  <div id="board">
-    <div class="board-top">
-      <div class="left">
-        <div class="cong" id="cong">CONG.: "VILLA FIAD"</div>
-        <h1 id="title">Programa para la reunión de entre semana</h1>
-        <div class="date" id="date">—</div>
+    <div class="row space no-print">
+      <div>
+        <h2>Tablero</h2>
+        <div class="small">Semana: <b id="weekPretty">—</b></div>
       </div>
-      <div class="right">
-        <div><span class="label">Presidente:</span> <span class="val" id="pres">—</span></div>
-        <div><span class="label">Oración inicio:</span> <span class="val" id="or1">—</span></div>
-        <div><span class="label">Oración final:</span> <span class="val" id="or2">—</span></div>
+      <div class="row">
+        <button id="btnPrint" class="secondary">Imprimir</button>
       </div>
     </div>
 
-    <div id="partsList"></div>
-  </div>
-</div>
+    <div id="boardWrap">
+      <div id="board">
+        <div class="board-top">
+          <div class="left">
+            <div class="cong" id="cong">CONG.: VILLA FIAD</div>
+            <h1 id="title">Programa para la reunión Vida y Ministerio Cristianos</h1>
+            <div class="date" id="date">—</div>
+            <div class="small" id="schedule">—</div>
+          </div>
+          <div class="right">
+            <div><span class="label">Presidente:</span> <span class="val" id="pres">—</span></div>
+            <div><span class="label">Oración inicio:</span> <span class="val" id="or1">—</span></div>
+            <div><span class="label">Oración final:</span> <span class="val" id="or2">—</span></div>
+          </div>
+        </div>
 
-    <footer>
-      <div>Consejo: guardá la semana antes de pasar a otra. Si ves “No guardado”, no cambies de semana hasta guardar.</div>
-    </footer>
+        <div id="specialBox"></div>
+        <div id="partsList"></div>
+      </div>
+    </div>
   </div>
-
   <script type="module" src="js/tablero.js"></script>
 </body>
 </html>

@@ -29,24 +29,22 @@
   <div class="container">
     <div class="grid cols-2">
       <div class="card">
-        <h2>Firebase Config</h2>
-        <p>Pegá acá tu <span class="kbd">firebaseConfig</span> (JSON). Se guarda en tu navegador (localStorage).</p>
-        <textarea id="cfg" spellcheck="false" placeholder='{"apiKey":"...","authDomain":"...","projectId":"..."}'></textarea>
-        <div class="small">Tip: en Firebase Console → Project settings → Your apps → SDK setup and configuration.</div>
+        <h2>Configuración general</h2>
+        <div class="small">Congregación</div>
+        <input id="congregacion" style="width:100%" placeholder="Villa Fiad" />
+        <div class="small" style="margin-top:10px">Viajante por defecto</div>
+        <input id="travelerName" style="width:100%" placeholder="Roberto Armando" />
+        <div class="small" style="margin-top:10px">Horario sugerido</div>
+        <input id="defaultTime" style="width:100%" placeholder="19:30" />
+        <div class="small" style="margin-top:10px">Fechas sin reunión (una por línea: AAAA-MM-DD | Motivo)</div>
+        <textarea id="noMeetingDates" placeholder="2026-04-02 | Conmemoración"></textarea>
       </div>
 
       <div class="card">
-        <h2>Configuración VMC</h2>
-        <div class="small">Congregación</div>
-        <input id="congregacion" style="width:100%" placeholder='CONG.: "VILLA FIAD"' />
-
-        <div class="small" style="margin-top:10px">Viajante por defecto</div>
-        <input id="travelingName" style="width:100%" placeholder="Roberto Armando" />
-
-        <div class="small" style="margin-top:10px">Horario sugerido</div>
-        <input id="defaultTime" type="time" style="width:100%" />
-
-        <div class="small" style="margin-top:10px">Proxy (opcional)</div>
+        <h2>Firebase y proxy</h2>
+        <div class="small">Firebase Config (JSON)</div>
+        <textarea id="cfg" spellcheck="false" placeholder='{"apiKey":"...","authDomain":"...","projectId":"..."}'></textarea>
+        <div class="small" style="margin-top:10px">Proxy base (opcional)</div>
         <input id="proxy" placeholder="https://TU-WORKER.workers.dev/?url=" style="width:100%" />
         <hr/>
         <button id="btnSaveCfg" class="success">Guardar configuración</button>

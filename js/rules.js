@@ -1,77 +1,72 @@
-function norm(s){ return (s || "").toLowerCase(); }
-const isApprovedBrother = p => p.sex === 'H' && p.approved === true;
-const isBrother = p => p.sex === 'H';
-const isElder = p => p.role === 'Anciano';
-const isSM = p => p.role === 'Siervo Ministerial';
-const hasCan = (p, key) => p?.can?.[key] === true;
+import { weeksBetween } from "./app.js";
 
-function maestroSubtype(row){
-  const label = norm(`${row.type} ${row.title || ''}`);
-  if (label.includes('empiece conversaciones')) return 'empiece';
-  if (label.includes('haga revisitas')) return 'revisita';
-  if (label.includes('haga discip')) return 'discipulos';
-  if (label.includes('explique sus creencias')) return 'explique';
-  if (label.includes('discurso')) return 'discurso';
-  return 'maestros';
-}
-function vidaSubtype(row){
-  const label = norm(`${row.type} ${row.title || ''}`);
-  if (label.includes('necesidades')) return 'necesidades';
-  if (label.includes('análisis con el auditorio') || label.includes('analisis con el auditorio')) return 'analisis';
-  return 'vida';
-}
+function isBrother(p){ return p.sex === "H"; }
+function isSister(p){ return p.sex === "M"; }
+function isElder(p){ return p.role === "Anciano"; }
+function isMS(p){ return p.role === "Siervo Ministerial"; }
+function isApprovedBrother(p){ return isBrother(p) && p.approved === true; }
 
 export const Rules = {
-  rowNeedsHelper(row){
-    return row?.type?.startsWith('Maestros') && maestroSubtype(row) !== 'discurso';
+  allowedFor(partType, person){
+    if(person.active === false) return false;
+    const can = person.can || {};
+    const exact = (key, fallback)=> can[key] === true || (can[key] === undefined && fallback);
+
+    switch(partType){
+      case "Presidente":
+        return exact("presidir", isElder(person) || isMS(person));
+      case "Oración inicial":
+      case "Oración final":
+        return exact("orar", isApprovedBrother(person));
+      case "Tesoros":
+        return exact("tesoros", isElder(person) || isMS(person));
+      case "Perlas":
+        return exact("perlas", isElder(person) || isMS(person));
+      case "Lectura de la Biblia":
+        return exact("lecturaBiblia", isApprovedBrother(person));
+      case "Asignación estudiantil":
+        return exact("estudiante", !!person.student || isBrother(person) || isSister(person));
+      case "Ayudante":
+        return exact("ayudante", !!person.student || isBrother(person) || isSister(person));
+      case "Discurso de estudiante":
+        return exact("discursoEstudiante", isBrother(person));
+      case "Nuestra vida cristiana":
+        return exact("vidaCristiana", isElder(person) || isMS(person));
+      case "Necesidades de la congregación":
+        return exact("necesidades", isElder(person));
+      case "Conductor EBC":
+        return exact("conductorEbc", isElder(person) || isMS(person));
+      case "Lector EBC":
+        return exact("lectorEbc", isApprovedBrother(person));
+      case "Discurso del viajante":
+        return true;
+      default:
+        return person.active !== false;
+    }
   },
-  isFixedExternal(row){
-    return row?.type === 'Discurso del viajante';
-  },
-  allowedFor(row, person, isHelper=false, mainPerson=null){
-    if (!row || !person || person.active === false || this.isFixedExternal(row)) return false;
-    if (isHelper){
-      if (!this.rowNeedsHelper(row) || !mainPerson || person.id === mainPerson.id) return false;
-      if (mainPerson.sex && person.sex && mainPerson.sex !== person.sex) return false;
-      return true;
-    }
-    if (row.type === 'Presidente') return hasCan(person,'presidir') || isElder(person) || isSM(person);
-    if (row.type === 'Oración (inicio)' || row.type === 'Oración (final)') return isApprovedBrother(person) && (hasCan(person,'oracion') || hasCan(person,'lecturaBiblia') || isElder(person) || isSM(person));
-    if (row.type === 'Tesoros 1 (Discurso)') return hasCan(person,'tesoros') || isElder(person) || isSM(person);
-    if (row.type === 'Tesoros 2 (Perlas)') return hasCan(person,'perlas') || isElder(person) || isSM(person);
-    if (row.type === 'Tesoros 3 (Lectura Biblia)') return hasCan(person,'lecturaBiblia') || isApprovedBrother(person);
-    if (row.type === 'Estudio bíblico (Conductor)') return hasCan(person,'ebcConductor') || isElder(person) || isSM(person);
-    if (row.type === 'Estudio bíblico (Lector)') return hasCan(person,'ebcLector') || isApprovedBrother(person);
-    if (row.type === 'Repaso y anuncios') return isElder(person) || isSM(person) || hasCan(person,'vidaCristiana');
-    if (row.type?.startsWith('Vida Cristiana')){
-      const sub = vidaSubtype(row);
-      if (sub === 'necesidades') return hasCan(person,'necesidades') || isElder(person);
-      return hasCan(person,'vidaCristiana') || isElder(person) || isSM(person);
-    }
-    if (row.type?.startsWith('Maestros')){
-      const sub = maestroSubtype(row);
-      if (sub === 'discurso') return hasCan(person,'discursoEstudiante') || (person.student && isBrother(person));
-      if (sub === 'explique' && norm(row.title).includes('discurso')) return hasCan(person,'expliqueDiscurso') || (person.student && isBrother(person));
-      return person.student === true || person.active !== false;
-    }
-    return person.active !== false;
+
+  helperAllowed(mainPerson, helper){
+    if(!helper || helper.active === false) return false;
+    if(!mainPerson) return Rules.allowedFor("Ayudante", helper);
+    if(!Rules.allowedFor("Ayudante", helper)) return false;
+    if(mainPerson.id === helper.id) return false;
+    const sameSex = mainPerson.sex && helper.sex && mainPerson.sex === helper.sex;
+    const sameFamily = !!mainPerson.familyGroup && !!helper.familyGroup && mainPerson.familyGroup === helper.familyGroup;
+    return sameSex || sameFamily;
   }
 };
 
-function weekDiff(fromISO, toISO){
-  if(!fromISO || !toISO) return 999;
-  const a = new Date(`${fromISO}T00:00:00`);
-  const b = new Date(`${toISO}T00:00:00`);
-  return Math.floor((b - a) / (86400000 * 7));
-}
-
-export function scoreCandidate({person, currentWeekISO, historyByPerson}){
-  const h = historyByPerson[person.id] || [];
-  const latest = h.sort((a,b)=> String(b.weekISO).localeCompare(String(a.weekISO)))[0];
-  const weeksAway = latest ? weekDiff(latest.weekISO, currentWeekISO) : 999;
-  let score = -weeksAway * 100;
-  score += h.length * 2;
-  if (person.role === 'Anciano') score += 2;
-  if (person.role === 'Siervo Ministerial') score += 1;
+export function scoreCandidate({person, historyByPerson, currentWeekISO, currentUsedIds=new Set(), partType}){
+  const hist = historyByPerson[person.id] || [];
+  let lastAnyWeeks = 999;
+  if(hist.length){
+    const latest = hist.slice().sort((a,b)=>(b.weekISO||"").localeCompare(a.weekISO||""))[0];
+    lastAnyWeeks = weeksBetween(latest.weekISO, currentWeekISO);
+  }
+  let score = 0;
+  score -= Math.min(lastAnyWeeks, 999) * 10;
+  score += hist.length;
+  if(currentUsedIds.has(person.id)) score += 500;
+  if(partType === "Presidente" && person.role === "Anciano") score -= 5;
   return score;
 }

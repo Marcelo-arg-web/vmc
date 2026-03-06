@@ -33,30 +33,26 @@
           <h2>Semana</h2>
           <div class="small">Fecha: <b id="weekPretty">—</b></div>
         </div>
-        <div class="row">
-          <input id="weekISO" type="date" />
-        </div>
+        <input id="weekISO" type="date" />
       </div>
 
-      <hr/>
-
-      <div class="grid cols-3">
+      <div class="grid cols-3" style="margin-top:12px">
         <div>
-          <div class="small">Día de reunión</div>
-          <input id="meetingDay" style="width:100%" placeholder="jueves / martes" />
+          <div class="small">Día</div>
+          <input id="meetingDay" style="width:100%" placeholder="jueves" />
         </div>
         <div>
           <div class="small">Hora</div>
-          <input id="meetingTime" type="time" style="width:100%" />
+          <input id="meetingTime" style="width:100%" placeholder="19:30" />
         </div>
         <div>
           <div class="small">Tipo de semana</div>
           <select id="weekType" style="width:100%">
             <option value="normal">Normal</option>
-            <option value="viajante">Visita del viajante</option>
+            <option value="visita">Visita del viajante</option>
             <option value="asamblea">Asamblea</option>
             <option value="conmemoracion">Conmemoración</option>
-            <option value="sin_reunion">Sin reunión por otro motivo</option>
+            <option value="sin_reunion">Sin reunión</option>
           </select>
         </div>
       </div>
@@ -67,19 +63,38 @@
           <input id="wolLink" style="width:100%" placeholder="https://wol.jw.org/..." />
         </div>
         <div>
-          <div class="small">Motivo / observación</div>
-          <input id="specialReason" style="width:100%" placeholder="Ej.: Asamblea regional / Conmemoración / corte de luz..." />
+          <div class="small">Motivo / observación especial</div>
+          <input id="specialReason" style="width:100%" placeholder="Asamblea, conmemoración, semana especial..." />
         </div>
       </div>
 
-      <div class="grid cols-2" style="margin-top:12px">
+      <div class="grid cols-3" style="margin-top:12px">
         <div>
-          <div class="small">Nombre del viajante</div>
-          <input id="travelingSpeaker" style="width:100%" placeholder="Roberto Armando" />
+          <div class="small">Lectura bíblica</div>
+          <input id="reading" style="width:100%" />
+        </div>
+        <div>
+          <div class="small">Canción inicial</div>
+          <input id="openingSong" style="width:100%" />
+        </div>
+        <div>
+          <div class="small">Canción intermedia</div>
+          <input id="middleSong" style="width:100%" />
+        </div>
+      </div>
+
+      <div class="grid cols-3" style="margin-top:12px">
+        <div>
+          <div class="small">Canción final</div>
+          <input id="closingSong" style="width:100%" />
+        </div>
+        <div>
+          <div class="small">Viajante</div>
+          <input id="travelerName" style="width:100%" placeholder="Roberto Armando" />
         </div>
         <div>
           <div class="small">Título del discurso del viajante</div>
-          <input id="travelingTalkTitle" style="width:100%" placeholder="Discurso de servicio del viajante" />
+          <input id="travelerTalkTitle" style="width:100%" placeholder="Discurso de servicio del viajante" />
         </div>
       </div>
 

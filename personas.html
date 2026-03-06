@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Personas — Planificador VMC</title>
   <link rel="stylesheet" href="css/styles.css" />
-  
 </head>
 <body>
   <div class="topbar">
@@ -28,106 +27,113 @@
   </div>
 
   <div class="container">
-    
+    <div class="card personas-full">
+      <div class="row space">
+        <div>
+          <h2 id="formTitle">Agregar persona</h2>
+          <div class="small">Marcá solo lo que realmente puede hacer.</div>
+        </div>
+        <div class="small" id="status">—</div>
+      </div>
 
-<div class="card personas-full">
-  <div class="row space">
-    <h2 id="formTitle">Agregar persona</h2>
-    <div class="small" id="status">—</div>
+      <form id="personForm">
+        <div class="grid cols-2">
+          <div>
+            <div class="small">Nombre</div>
+            <input id="name" list="datalistName" style="width:100%" placeholder="Apellido, Nombre" />
+            <datalist id="datalistName"></datalist>
+          </div>
+          <div>
+            <div class="small">Grupo familiar (opcional)</div>
+            <input id="familyGroup" style="width:100%" placeholder="Ej.: Navarro / Rivadeneira" />
+          </div>
+        </div>
+
+        <div class="grid cols-3" style="margin-top:10px">
+          <div>
+            <div class="small">Sexo</div>
+            <select id="sex" style="width:100%">
+              <option value="">—</option>
+              <option value="H">H (Hermano)</option>
+              <option value="M">M (Hermana)</option>
+            </select>
+          </div>
+          <div>
+            <div class="small">Rol</div>
+            <select id="role" style="width:100%">
+              <option value="">—</option>
+              <option>Anciano</option>
+              <option>Siervo Ministerial</option>
+              <option>Publicador</option>
+              <option>Publicadora</option>
+            </select>
+          </div>
+          <div>
+            <div class="small">Estado</div>
+            <label class="row"><input id="active" type="checkbox" checked> <span>Activo</span></label>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px; flex-wrap:wrap; gap:14px">
+          <label class="row"><input id="student" type="checkbox"> <span>Estudiante</span></label>
+          <label class="row"><input id="approved" type="checkbox"> <span>Hermano aprobado (oración / lectura)</span></label>
+          <label class="row"><input id="spouseOnly" type="checkbox"> <span>Solo con familiar si hace falta</span></label>
+        </div>
+
+        <div class="small" style="margin-top:14px">Puede hacer</div>
+        <div class="grid cols-3" style="margin-top:8px">
+          <label class="row"><input id="can_presidir" type="checkbox"> <span>Presidir</span></label>
+          <label class="row"><input id="can_orar" type="checkbox"> <span>Oraciones</span></label>
+          <label class="row"><input id="can_tesoros" type="checkbox"> <span>Tesoros</span></label>
+          <label class="row"><input id="can_perlas" type="checkbox"> <span>Perlas</span></label>
+          <label class="row"><input id="can_lecturaBiblia" type="checkbox"> <span>Lectura de la Biblia</span></label>
+          <label class="row"><input id="can_estudiante" type="checkbox"> <span>Asignación estudiantil</span></label>
+          <label class="row"><input id="can_ayudante" type="checkbox"> <span>Ayudante</span></label>
+          <label class="row"><input id="can_discursoEstudiante" type="checkbox"> <span>Discurso de estudiante</span></label>
+          <label class="row"><input id="can_vidaCristiana" type="checkbox"> <span>Nuestra vida cristiana</span></label>
+          <label class="row"><input id="can_necesidades" type="checkbox"> <span>Necesidades de la congregación</span></label>
+          <label class="row"><input id="can_conductorEbc" type="checkbox"> <span>Conductor EBC</span></label>
+          <label class="row"><input id="can_lectorEbc" type="checkbox"> <span>Lector EBC</span></label>
+        </div>
+
+        <div class="small" style="margin-top:10px">Notas</div>
+        <textarea id="notes" placeholder="Restricciones, observaciones..."></textarea>
+
+        <div class="row space" style="margin-top:12px; gap:10px; flex-wrap:wrap">
+          <div class="row" style="gap:8px; flex-wrap:wrap">
+            <button id="btnPrev" type="button" class="btn">Anterior</button>
+            <button id="btnNext" type="button" class="btn">Siguiente</button>
+          </div>
+          <div class="row" style="gap:8px; flex-wrap:wrap">
+            <span class="small" id="navInfo"></span>
+            <button type="submit" class="success">Guardar</button>
+            <button type="button" id="btnDelete" class="danger" style="display:none">Eliminar</button>
+            <button type="button" id="btnCancel" class="ghost" style="display:none">Cancelar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="margin-top:14px; display:none" id="listCard">
+      <div class="row space">
+        <h2>Lista</h2>
+        <button id="btnToggleList" class="btn" type="button">Ocultar lista</button>
+      </div>
+      <input id="search" placeholder="Buscar..." style="width:100%; margin:10px 0" />
+      <table class="table" id="tblPeople">
+        <thead>
+          <tr>
+            <th>Nombre</th><th>Sexo</th><th>Rol</th><th>Activo</th><th>Notas</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:10px">
+      <button id="btnShowList" class="btn" type="button">Mostrar lista</button>
+    </div>
   </div>
-
-  <form id="personForm">
-    <div class="small">Nombre</div>
-    <input id="name" list="datalistName" style="width:100%" placeholder="Apellido, Nombre" />
-    <datalist id="datalistName"></datalist>
-
-    <div class="grid cols-2" style="margin-top:10px">
-      <div>
-        <div class="small">Sexo</div>
-        <select id="sex" style="width:100%">
-          <option value="">—</option>
-          <option value="H">H (Hermano)</option>
-          <option value="M">M (Hermana)</option>
-        </select>
-      </div>
-      <div>
-        <div class="small">Rol</div>
-        <select id="role" style="width:100%">
-          <option value="">—</option>
-          <option>Anciano</option>
-          <option>Siervo Ministerial</option>
-          <option>Publicador</option>
-          <option>Publicadora</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:10px; flex-wrap:wrap; gap:14px">
-      <label class="row"><input id="student" type="checkbox"> <span>Estudiante</span></label>
-      <label class="row"><input id="approved" type="checkbox"> <span>Hermano aprobado (oración/lectura)</span></label>
-      <label class="row"><input id="spouseOnly" type="checkbox"> <span>Solo con familiar/cónyuge</span></label>
-      <label class="row"><input id="active" type="checkbox" checked> <span>Activo</span></label>
-    </div>
-
-    <div class="small" style="margin-top:10px">Puede hacer</div>
-    <div class="row" style="margin-top:6px; gap:14px; flex-wrap:wrap">
-      <label class="row"><input id="puedePresidir" type="checkbox"> <span>Presidir (Presidente)</span></label>
-      <label class="row"><input id="puedeOracion" type="checkbox"> <span>Oraciones</span></label>
-      <label class="row"><input id="puedeTesoros" type="checkbox"> <span>Tesoros</span></label>
-      <label class="row"><input id="puedePerlas" type="checkbox"> <span>Perlas</span></label>
-      <label class="row"><input id="puedeLecturaBiblia" type="checkbox"> <span>Lectura de la Biblia</span></label>
-      <label class="row"><input id="puedeVidaCristiana" type="checkbox"> <span>Nuestra vida cristiana</span></label>
-      <label class="row"><input id="puedeEBCConductor" type="checkbox"> <span>EBC conductor</span></label>
-      <label class="row"><input id="puedeEBCLector" type="checkbox"> <span>EBC lector</span></label>
-      <label class="row"><input id="puedeDiscursoEstudiante" type="checkbox"> <span>Discurso de estudiante</span></label>
-      <label class="row"><input id="puedeExpliqueDiscurso" type="checkbox"> <span>Explique sus creencias (discurso)</span></label>
-      <label class="row"><input id="puedeNecesidades" type="checkbox"> <span>Necesidades de la congregación</span></label>
-    </div>
-
-    <div class="small" style="margin-top:10px">Notas</div>
-    <textarea id="notes" placeholder="Restricciones, observaciones..."></textarea>
-
-    <div class="row space" style="margin-top:12px; gap:10px; flex-wrap:wrap">
-      <div class="row" style="gap:8px; flex-wrap:wrap">
-        <button id="btnPrev" type="button" class="btn">Anterior</button>
-        <button id="btnNext" type="button" class="btn">Siguiente</button>
-      </div>
-
-      <div class="row" style="gap:8px; flex-wrap:wrap">
-        <span class="small" id="navInfo"></span>
-        <button type="submit" class="success">Guardar</button>
-        <button type="button" id="btnCancel" class="ghost" style="display:none">Cancelar</button>
-      </div>
-    </div>
-  </form>
-</div>
-
-<div class="card" style="margin-top:14px; display:none" id="listCard">
-  <div class="row space">
-    <h2>Lista</h2>
-    <button id="btnToggleList" class="btn" type="button">Ocultar lista</button>
-  </div>
-  <input id="search" placeholder="Buscar..." style="width:100%; margin:10px 0" />
-  <table class="table" id="tblPeople">
-    <thead>
-      <tr>
-        <th>Nombre</th><th>Sexo</th><th>Rol</th><th>Est.</th><th>Aprob.</th><th>Activo</th><th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
-
-<div style="margin-top:10px">
-  <button id="btnShowList" class="btn" type="button">Mostrar lista</button>
-</div>
-</div>
-
-    <footer>
-      <div>Consejo: guardá la semana antes de pasar a otra. Si ves “No guardado”, no cambies de semana hasta guardar.</div>
-    </footer>
-  </div>
-
   <script type="module" src="js/personas.js"></script>
 </body>
 </html>

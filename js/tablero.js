@@ -1,67 +1,54 @@
 import { qs, Storage, fmtDateAR } from "./app.js";
 import { mountHeader } from "./ui_common.js";
-import { loadAssignments, loadWeek } from "./data.js";
+import { loadWeek, loadAssignments, loadAppSettings } from "./data.js";
 
 mountHeader();
 
-const weekISO = Storage.get('currentWeekISO', '');
-qs('#weekPretty').textContent = fmtDateAR(weekISO);
+const weekISO = Storage.get("currentWeekISO", "");
+qs("#weekPretty").textContent = fmtDateAR(weekISO);
 
-function addSectionTitle(container, title){
-  const div = document.createElement('div');
-  div.className = 'board-section';
-  div.textContent = title;
-  container.appendChild(div);
-}
-
-function rowHtml(type, title, names){
-  return `<div class="board-row"><div class="left"><div class="sec">${type}</div><div class="main">${title || ''}</div></div><div class="right"><div class="name">${names || '—'}</div></div></div>`;
-}
+function byType(asg, type){ return asg.find(x=>x.type===type); }
+function itemHtml(title, who){ return `<div class="board-row"><div class="left"><div class="main">${title}</div></div><div class="right"><div class="name">${who || "—"}</div></div></div>`; }
+function fullName(row){ return row ? `${row.person1Name||"—"}${row.person2Name ? " / " + row.person2Name : ""}` : "—"; }
 
 async function load(){
-  const [asg, week] = await Promise.all([loadAssignments(weekISO), loadWeek(weekISO)]);
-  qs('#cong').textContent = Storage.get('congregacion', 'CONG.: "VILLA FIAD"');
-  qs('#title').textContent = 'Vida y Ministerio Cristianos';
-  const when = [fmtDateAR(weekISO), week?.meetingDay, week?.meetingTime].filter(Boolean).join(' · ');
-  qs('#date').textContent = when || fmtDateAR(weekISO);
+  const app = await loadAppSettings();
+  const w = await loadWeek(weekISO);
+  const asg = await loadAssignments(weekISO);
+  qs("#cong").textContent = `CONG.: ${String(app.congregacion || "Villa Fiad").toUpperCase()}`;
+  qs("#date").textContent = fmtDateAR(weekISO);
+  qs("#schedule").textContent = `${w?.meetingDay || ""} ${w?.meetingTime ? "| " + w.meetingTime : ""}`;
 
-  const get = (type) => asg.find(x=>x.type===type);
-  qs('#pres').textContent = get('Presidente')?.person1Name || '—';
-  qs('#or1').textContent = get('Oración (inicio)')?.person1Name || '—';
-  qs('#or2').textContent = get('Oración (final)')?.person1Name || '—';
-
-  const listEl = qs('#partsList');
-  listEl.innerHTML = '';
-
-  if(['asamblea','conmemoracion','sin_reunion'].includes(week?.weekType)){
-    addSectionTitle(listEl, 'Semana especial');
-    listEl.innerHTML += rowHtml('Sin reunión', week?.specialReason || 'No habrá reunión de entre semana esta semana.', '—');
+  if(["asamblea","conmemoracion","sin_reunion"].includes(w?.weekType)){
+    qs("#specialBox").innerHTML = `<div class="notice warn" style="margin-top:10px"><b>Esta semana no hay reunión.</b><br>${w?.specialReason || "Motivo especial"}</div>`;
+    qs("#partsList").innerHTML = "";
     return;
   }
 
-  const groups = [
-    { title:'Tesoros de la Biblia', match:x=>String(x.type).startsWith('Tesoros') },
-    { title:'Seamos mejores maestros', match:x=>String(x.type).startsWith('Maestros') },
-    { title:'Nuestra vida cristiana', match:x=>String(x.type).startsWith('Vida Cristiana') || String(x.type).startsWith('Estudio bíblico') || x.type==='Repaso y anuncios' || x.type==='Discurso del viajante' },
-  ];
+  qs("#pres").textContent = byType(asg, "Presidente")?.person1Name || "—";
+  qs("#or1").textContent = byType(asg, "Oración inicial")?.person1Name || "—";
+  qs("#or2").textContent = byType(asg, "Oración final")?.person1Name || "—";
 
-  for(const group of groups){
-    const rows = asg.filter(group.match);
-    if(!rows.length) continue;
-    addSectionTitle(listEl, group.title);
-    for(const row of rows){
-      const helper = row.person2Name ? ` / ${row.person2Name}` : '';
-      listEl.innerHTML += rowHtml(row.type, row.title || '', (row.person1Name || '—') + helper);
+  const sections = [];
+  sections.push({ name:"TESOROS DE LA BIBLIA", rows:[byType(asg,"Tesoros"), byType(asg,"Perlas"), byType(asg,"Lectura de la Biblia")].filter(Boolean) });
+  sections.push({ name:"SEAMOS MEJORES MAESTROS", rows: asg.filter(x=>["Asignación estudiantil","Discurso de estudiante"].includes(x.type)) });
+  sections.push({ name:"NUESTRA VIDA CRISTIANA", rows: asg.filter(x=>["Nuestra vida cristiana","Necesidades de la congregación","Discurso del viajante","Conductor EBC","Lector EBC"].includes(x.type)) });
+
+  const box = qs("#partsList");
+  box.innerHTML = "";
+  for(const sec of sections){
+    if(!sec.rows.length) continue;
+    const h = document.createElement("div");
+    h.className = "sectionTitle";
+    h.textContent = sec.name;
+    box.appendChild(h);
+    for(const row of sec.rows){
+      let who = fullName(row);
+      if(row.type === "Discurso del viajante" && w?.travelerName){ who = w.travelerName; }
+      box.insertAdjacentHTML("beforeend", itemHtml(row.title || row.type, who));
     }
   }
 }
-qs('#btnPrint').addEventListener('click', ()=>window.print());
-qs('#btnPNG').addEventListener('click', async ()=>{
-  const el = qs('#board');
-  const canvas = await window.html2canvas(el, { scale: 2 });
-  const a = document.createElement('a');
-  a.download = `VMC_${weekISO}.png`;
-  a.href = canvas.toDataURL('image/png');
-  a.click();
-});
-load().catch(console.error);
+
+qs("#btnPrint").addEventListener("click", ()=>window.print());
+load();
