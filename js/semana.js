@@ -1,4 +1,4 @@
-import { qs, qsa, Storage, todayISO, fmtDateAR, dayNameFromISO, shortWeekLabel, markUnsaved, requireSavedGuard } from "./app.js";
+import { qs, qsa, Storage, todayISO, fmtDateAR, fmtDayChip, dayNameFromISO, monthWeekOptions, addDaysISO, markUnsaved, requireSavedGuard } from "./app.js";
 import { mountHeader } from "./ui_common.js";
 import { fetchAndParseWOL } from "./wol.js";
 import { loadPeople, loadWeek, saveWeek, loadAssignments, saveAssignments, appendHistoryFromWeek, loadRecentHistory, loadAppSettings } from "./data.js";
@@ -7,6 +7,7 @@ import { Rules, scoreCandidate } from "./rules.js";
 mountHeader();
 
 const weekInput = qs("#weekISO");
+const weekChips = qs("#weekChips");
 const fields = {
   wolLink: qs("#wolLink"), meetingDay: qs("#meetingDay"), meetingTime: qs("#meetingTime"), weekType: qs("#weekType"),
   specialReason: qs("#specialReason"), reading: qs("#reading"), openingSong: qs("#openingSong"), middleSong: qs("#middleSong"),
@@ -26,13 +27,13 @@ function makeBaseParts(){
     { section:"Tesoros de la Biblia", type:"Tesoros", title:"Tesoros de la Biblia", minutes:10 },
     { section:"Tesoros de la Biblia", type:"Perlas", title:"Busquemos perlas escondidas", minutes:10 },
     { section:"Tesoros de la Biblia", type:"Lectura de la Biblia", title:"Lectura de la Biblia", minutes:4 },
-    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Seamos mejores maestros 1", needsHelper:true },
-    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Seamos mejores maestros 2", needsHelper:true },
-    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Seamos mejores maestros 3", needsHelper:true },
-    { section:"Nuestra vida cristiana", type:"Nuestra vida cristiana", title:"Nuestra vida cristiana 1" },
-    { section:"Nuestra vida cristiana", type:"Nuestra vida cristiana", title:"Nuestra vida cristiana 2" },
-    { section:"Nuestra vida cristiana", type:"Conductor EBC", title:"Estudio bíblico de la congregación" },
-    { section:"Nuestra vida cristiana", type:"Lector EBC", title:"Estudio bíblico de la congregación" }
+    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Empiece conversaciones", minutes:3, needsHelper:true },
+    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Haga revisitas", minutes:4, needsHelper:true },
+    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Explique sus creencias", minutes:5, needsHelper:true },
+    { section:"Nuestra vida cristiana", type:"Nuestra vida cristiana", title:"Nuestra vida cristiana 1", minutes:10 },
+    { section:"Nuestra vida cristiana", type:"Nuestra vida cristiana", title:"Nuestra vida cristiana 2", minutes:10 },
+    { section:"Nuestra vida cristiana", type:"Conductor EBC", title:"Estudio bíblico de la congregación", minutes:30 },
+    { section:"Nuestra vida cristiana", type:"Lector EBC", title:"Estudio bíblico de la congregación", minutes:30 }
   ];
 }
 
@@ -42,26 +43,36 @@ function hideMsg(){ msg.style.display="none"; }
 function guardBeforeSwitch(){ return requireSavedGuard() ? true : confirm("La semana actual no está guardada. ¿Cambiar igual?"); }
 function isNoMeeting(){ return ["asamblea","conmemoracion","sin_reunion"].includes(fields.weekType.value); }
 function isTravelerVisit(){ return fields.weekType.value === "visita"; }
-function setWeekPretty(){
-  qs("#weekPretty").textContent = fmtDateAR(weekInput.value);
-  qs("#weekLabel").textContent = shortWeekLabel(weekInput.value, fields.meetingDay?.value || "");
+function setWeekPretty(){ qs("#weekPretty").textContent = fmtDateAR(weekInput.value); }
+
+function gotoWeek(newISO){
+  if(!guardBeforeSwitch()) return;
+  weekInput.value = newISO;
+  Storage.set("currentWeekISO", newISO);
+  setWeekPretty();
+  renderWeekChips();
+  loadAll();
+}
+
+function renderWeekChips(){
+  const weeks = monthWeekOptions(weekInput.value);
+  weekChips.innerHTML = weeks.map((iso, idx)=>{
+    const cls = iso === weekInput.value ? "week-chip active" : "week-chip";
+    return `<button class="${cls}" data-week="${iso}" type="button">Semana ${idx+1} · ${fmtDayChip(iso)}</button>`;
+  }).join("");
+  qsa("[data-week]", weekChips).forEach(btn=>btn.addEventListener("click", ()=> gotoWeek(btn.dataset.week)));
 }
 
 weekInput.value = Storage.get("currentWeekISO", todayISO());
 setWeekPretty();
-weekInput.addEventListener("change", async ()=>{
-  if(!guardBeforeSwitch()){
-    weekInput.value = Storage.get("currentWeekISO", todayISO());
-    return;
-  }
-  Storage.set("currentWeekISO", weekInput.value);
-  setWeekPretty();
-  await loadAll();
-});
+renderWeekChips();
+weekInput.addEventListener("change", ()=> gotoWeek(weekInput.value));
+qs("#btnPrevWeek").addEventListener("click", ()=> gotoWeek(addDaysISO(weekInput.value, -7)));
+qs("#btnNextWeek").addEventListener("click", ()=> gotoWeek(addDaysISO(weekInput.value, 7)));
 
 for(const el of Object.values(fields)){
-  el.addEventListener("input", ()=>{ markUnsaved("Se modificó la semana."); if(el===fields.meetingDay || el===fields.meetingTime) setWeekPretty(); });
-  el.addEventListener("change", ()=>{ markUnsaved("Se modificó la semana."); if(el===fields.meetingDay || el===fields.meetingTime) setWeekPretty(); applyWeekTypeEffects(); });
+  el.addEventListener("input", ()=>markUnsaved("Se modificó la semana."));
+  el.addEventListener("change", ()=>{ markUnsaved("Se modificó la semana."); applyWeekTypeEffects(); });
 }
 
 function applyAppDefaults(){
@@ -106,7 +117,6 @@ async function loadAll(){
 
   maybeApplyNoMeetingDefaults();
   applyAppDefaults();
-  setWeekPretty();
   applyWeekTypeEffects();
   renderParts();
   renderAssignments();
@@ -118,13 +128,24 @@ function buildDefaultAssignments(){
   const rows = [];
   if(!parts.length) parts = makeBaseParts();
   let order = 0;
-  rows.push({ order:++order, key:"presidente", type:"Presidente", title:"Palabras de introducción y conclusión" });
+  rows.push({ order:++order, key:"presidente", type:"Presidente", title:"Palabras de introducción" });
   rows.push({ order:++order, key:"oracion_inicial", type:"Oración inicial", title:"Oración inicial" });
   for(const p of parts){
-    rows.push({ order:++order, key:`${p.type}_${order}`, type:p.type, title:p.title, section:p.section, minutes:p.minutes||"", needsHelper: !!p.needsHelper, person1Id:"", person1Name:"", person2Id:"", person2Name:"" });
+    rows.push({ order:++order, key:`${p.type}_${order}`, type:p.type, title:p.title, section:p.section, minutes:p.minutes||"", needsHelper: !!p.needsHelper, detail:p.detail||"", person1Id:"", person1Name:"", person2Id:"", person2Name:"" });
   }
   rows.push({ order:++order, key:"oracion_final", type:"Oración final", title:"Oración final" });
   return rows;
+}
+
+function groupedAssignments(){
+  const groups = [
+    { label:"Inicio", rows: assignments.filter(x=>["Presidente","Oración inicial"].includes(x.type)) },
+    { label:"Tesoros de la Biblia", rows: assignments.filter(x=>["Tesoros","Perlas","Lectura de la Biblia"].includes(x.type)) },
+    { label:"Seamos mejores maestros", rows: assignments.filter(x=>["Asignación estudiantil","Discurso de estudiante"].includes(x.type)) },
+    { label:"Nuestra vida cristiana", rows: assignments.filter(x=>["Nuestra vida cristiana","Necesidades de la congregación","Discurso del viajante","Conductor EBC","Lector EBC"].includes(x.type)) },
+    { label:"Final", rows: assignments.filter(x=>["Oración final"].includes(x.type)) }
+  ];
+  return groups.filter(g=>g.rows.length);
 }
 
 function optionsForRow(row, helper=false){
@@ -138,23 +159,27 @@ function optionsForRow(row, helper=false){
   return opts.join("");
 }
 
+function rowSubtitle(row){
+  const meta = [];
+  if(row.detail) meta.push(row.detail);
+  if(row.minutes) meta.push(`${row.minutes} min.`);
+  return meta.join(" · ");
+}
+
 function renderParts(){
   if(isNoMeeting()){
     partsBox.innerHTML = `<div class="notice warn">Esta semana no hay reunión. Motivo: <b>${fields.specialReason.value || fields.weekType.options[fields.weekType.selectedIndex].text}</b></div>`;
     return;
   }
   if(!parts.length) parts = makeBaseParts();
-  const t = document.createElement("table");
-  t.className = "table";
-  t.innerHTML = "<thead><tr><th>Sección</th><th>Parte</th><th>Título</th><th>Min</th></tr></thead><tbody></tbody>";
-  const tb = t.querySelector("tbody");
-  for(const p of parts){
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${p.section||""}</td><td>${p.type||""}</td><td>${p.title||""}</td><td>${p.minutes||""}</td>`;
-    tb.appendChild(tr);
-  }
-  partsBox.innerHTML = "";
-  partsBox.appendChild(t);
+  partsBox.innerHTML = parts.map((p, idx)=>`
+    <div class="detected-row">
+      <div class="detected-no">${idx+1}</div>
+      <div>
+        <div class="detected-title">${p.title || p.type}</div>
+        <div class="small">${p.section || ""}${p.minutes ? ` · ${p.minutes} min.` : ""}</div>
+      </div>
+    </div>`).join("");
 }
 
 function renderAssignments(){
@@ -165,39 +190,32 @@ function renderAssignments(){
   }
   if(!assignments.length) assignments = buildDefaultAssignments();
 
-  const sections = [
-    { title:"Inicio", rows: assignments.filter(r=>["Presidente","Oración inicial"].includes(r.type)) },
-    { title:"Tesoros de la Biblia", rows: assignments.filter(r=>["Tesoros","Perlas","Lectura de la Biblia"].includes(r.type)) },
-    { title:"Seamos mejores maestros", rows: assignments.filter(r=>["Asignación estudiantil","Discurso de estudiante"].includes(r.type)) },
-    { title:"Nuestra vida cristiana", rows: assignments.filter(r=>["Nuestra vida cristiana","Necesidades de la congregación","Discurso del viajante","Conductor EBC","Lector EBC"].includes(r.type)) },
-    { title:"Final", rows: assignments.filter(r=>["Oración final"].includes(r.type)) }
-  ].filter(sec=>sec.rows.length);
-
-  const frag = document.createDocumentFragment();
-  for(const sec of sections){
-    const card = document.createElement("div");
-    card.className = "assign-section";
-    card.innerHTML = `<div class="assign-section-title">${sec.title}</div>`;
-    const t = document.createElement("table");
-    t.className = "table";
-    t.innerHTML = "<thead><tr><th style='width:18%'>Parte</th><th style='width:34%'>Título</th><th style='width:24%'>Asignado</th><th style='width:24%'>Ayudante</th></tr></thead><tbody></tbody>";
-    const tb = t.querySelector("tbody");
-    for(const r of sec.rows){
+  const wrap = document.createElement("div");
+  for(const group of groupedAssignments()){
+    const sec = document.createElement("div");
+    sec.className = "assign-group";
+    sec.innerHTML = `<div class="assign-group-title">${group.label}</div>`;
+    for(const r of group.rows){
       const helper = r.needsHelper ? `<select data-h2="${r.key}">${optionsForRow(r, true)}</select>` : `<span class="small">—</span>`;
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><span class="pill">${r.type}</span></td>
-        <td><input data-title="${r.key}" value="${(r.title||"").replace(/"/g,"&quot;")}" style="width:100%" /></td>
-        <td><select data-h1="${r.key}">${optionsForRow(r)}</select></td>
-        <td>${helper}</td>`;
-      tb.appendChild(tr);
+      const row = document.createElement("div");
+      row.className = "assign-row";
+      row.innerHTML = `
+        <div>
+          <div class="assign-type">${r.type}</div>
+          <div class="assign-sub">${rowSubtitle(r)}</div>
+        </div>
+        <div>
+          <input data-title="${r.key}" value="${(r.title||"").replace(/"/g,"&quot;")}" style="width:100%" />
+        </div>
+        <div><select data-h1="${r.key}">${optionsForRow(r)}</select></div>
+        <div>${helper}</div>`;
+      sec.appendChild(row);
     }
-    card.appendChild(t);
-    frag.appendChild(card);
+    wrap.appendChild(sec);
   }
-  asgBox.appendChild(frag);
+  asgBox.appendChild(wrap);
 
-  qsa("[data-h1]").forEach(sel=>{
+  qsa("[data-h1]", asgBox).forEach(sel=>{
     const row = assignments.find(x=>x.key===sel.dataset.h1);
     sel.value = row?.person1Id || "";
     sel.addEventListener("change", ()=>{
@@ -210,7 +228,7 @@ function renderAssignments(){
       markUnsaved("Se editaron asignaciones.");
     });
   });
-  qsa("[data-h2]").forEach(sel=>{
+  qsa("[data-h2]", asgBox).forEach(sel=>{
     const row = assignments.find(x=>x.key===sel.dataset.h2);
     sel.value = row?.person2Id || "";
     sel.addEventListener("change", ()=>{
@@ -219,7 +237,7 @@ function renderAssignments(){
       markUnsaved("Se editaron asignaciones.");
     });
   });
-  qsa("[data-title]").forEach(inp=>{
+  qsa("[data-title]", asgBox).forEach(inp=>{
     const row = assignments.find(x=>x.key===inp.dataset.title);
     inp.addEventListener("input", ()=>{ row.title = inp.value; markUnsaved("Se editó una parte."); });
   });
@@ -228,16 +246,12 @@ function renderAssignments(){
 function applyWeekTypeEffects(){
   if(isTravelerVisit()){
     assignments = assignments.filter(x=>!["Conductor EBC","Lector EBC"].includes(x.type));
-    if(!parts.some(x=>x.type === "Discurso del viajante")){
-      parts = (parts.length ? parts : makeBaseParts()).filter(x=>!["Conductor EBC","Lector EBC","Discurso del viajante"].includes(x.type));
-      parts.push({ section:"Nuestra vida cristiana", type:"Discurso del viajante", title: fields.travelerTalkTitle.value || "Discurso de servicio del viajante", minutes:30 });
-      assignments = buildDefaultAssignments();
-    }
+    parts = (parts.length ? parts : makeBaseParts()).filter(x=>!["Conductor EBC","Lector EBC","Discurso del viajante"].includes(x.type));
+    parts.push({ section:"Nuestra vida cristiana", type:"Discurso del viajante", title: fields.travelerTalkTitle.value || "Discurso de servicio del viajante", minutes:30 });
+    assignments = buildDefaultAssignments();
   } else if(!isNoMeeting()){
-    if(!parts.length) parts = makeBaseParts();
-    const hasEbc = parts.some(x=>x.type === "Conductor EBC");
     const hasTraveler = parts.some(x=>x.type === "Discurso del viajante");
-    if(hasTraveler && !hasEbc){
+    if(hasTraveler){
       parts = parts.filter(x=>x.type !== "Discurso del viajante");
       parts.push({ section:"Nuestra vida cristiana", type:"Conductor EBC", title:"Estudio bíblico de la congregación", minutes:30 });
       parts.push({ section:"Nuestra vida cristiana", type:"Lector EBC", title:"Estudio bíblico de la congregación", minutes:30 });

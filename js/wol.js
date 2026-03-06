@@ -1,163 +1,178 @@
 import { markUnsaved } from "./app.js";
 
 export function buildFetchUrl(wolUrl, proxyBase){
-  const clean = (wolUrl || "").trim();
+  const clean = (wolUrl||"").trim();
   if(!clean) return null;
   if(proxyBase) return proxyBase + encodeURIComponent(clean);
-  return "https://r.jina.ai/http://" + clean.replace(/^https?:\/\//, "");
+  return "https://r.jina.ai/http://" + clean.replace(/^https?:\/\//,"");
 }
 
-function normalizeText(raw){
-  return (raw || "")
-    .replace(/\r/g, "")
-    .replace(/\u00a0/g, " ")
-    .replace(/\[\*\*([^\]]+?)\*\*\]\(([^)]+)\)/g, "$1")
-    .replace(/\[([^\]]+?)\]\(([^)]+)\)/g, "$1")
-    .replace(/[*_`>#]+/g, "")
+function stripTags(html){
+  return html.replace(/<script[\s\S]*?<\/script>/gi,"")
+             .replace(/<style[\s\S]*?<\/style>/gi,"");
+}
+
+function cleanMarkdownArtifacts(text){
+  return text
+    .replace(/\*\*/g, "")
+    .replace(/\[[^\]]*\]\((?:https?:\/\/)?[^)]+\)/g, "")
+    .replace(/\]\((?:https?:\/\/)?[^)]+\)/g, "")
+    .replace(/[_`>#]+/g, " ")
+    .replace(/\s+\|\s+/g, " | ")
     .replace(/[ \t]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+    .replace(/\n{3,}/g, "\n\n");
 }
 
-function cleanLine(s){
-  return (s || "").replace(/^[•*]\s*/, "").replace(/\s+/g, " ").trim();
+function textFromHTML(html){
+  const cleaned = stripTags(html);
+  const doc = new DOMParser().parseFromString(cleaned, "text/html");
+  const text = doc.body ? (doc.body.innerText || doc.body.textContent || "") : cleaned;
+  return cleanMarkdownArtifacts(text.replace(/\r/g, ""));
 }
 
-function norm(s){
-  return (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+function norm(s){ return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
+function compact(s){ return (s||"").replace(/\s+/g," ").trim(); }
+function titleCaseBible(s){ return compact(s).replace(/\b([a-záéíóúñ])/g, m=>m.toUpperCase()); }
+
+function parseReading(text){
+  const lines = text.split("\n").map(compact).filter(Boolean);
+  const readingLine = lines.find(l=>/lectura semanal de la biblia/i.test(l));
+  if(readingLine){
+    const cleaned = readingLine
+      .replace(/lectura semanal de la biblia/i, "")
+      .replace(/[|:]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return titleCaseBible(cleaned.replace(/\b(\d+),\s*(\d+)\b/g, "$1, $2"));
+  }
+  const m = text.match(/([1-3]?\s?[A-Za-zÁÉÍÓÚÑáéíóúñ]+\s+\d+[\s,:-]*\d*)/);
+  return m ? titleCaseBible(m[1]) : "";
 }
 
-function compact(s){
-  return cleanLine(s);
+function sectionBetween(text, startText, endTexts=[]){
+  const lines = text.split("\n");
+  const startIdx = lines.findIndex(l=>norm(l).includes(norm(startText)));
+  if(startIdx === -1) return "";
+  let endIdx = lines.length;
+  for(let i=startIdx+1;i<lines.length;i++){
+    const nl = norm(lines[i]);
+    if(endTexts.some(e=> nl.includes(norm(e)))){ endIdx = i; break; }
+  }
+  return lines.slice(startIdx, endIdx).join("\n");
 }
 
-function parseMinutes(lines, startIndex){
-  for(let i=startIndex + 1; i < Math.min(lines.length, startIndex + 4); i++){
-    const m = /\((\d+)\s*mins?\.?|\((\d+)\s*minutos?\.?/i.exec(lines[i]);
-    if(m) return Number(m[1] || m[2]);
+function extractSongAfter(anchor, text){
+  const lines = text.split("\n").map(compact).filter(Boolean);
+  const idx = lines.findIndex(l=>norm(l).includes(norm(anchor)));
+  if(idx === -1) return "";
+  for(let i=idx;i>=Math.max(0, idx-2);i--){
+    const m = lines[i].match(/canci[oó]n\s+(\d+)/i);
+    if(m) return m[1];
+  }
+  for(let i=idx;i<Math.min(lines.length, idx+4);i++){
+    const m = lines[i].match(/canci[oó]n\s+(\d+)/i);
+    if(m) return m[1];
   }
   return "";
 }
 
-function nextContentLine(lines, startIndex){
-  for(let i=startIndex + 1; i < lines.length; i++){
-    const line = lines[i];
-    if(/^##\s+/i.test(line) || /^###\s+\d+\./i.test(line) || /^###\s+canci[oó]n/i.test(line) || /^###\s+palabras de conclusi/i.test(line)) break;
-    const cleaned = cleanLine(line);
-    if(!cleaned) continue;
-    if(/^\((\d+)\s*mins?\.?|\((\d+)\s*minutos?\.?/i.test(cleaned)) continue;
-    if(/^respuesta$/i.test(cleaned)) continue;
-    if(/^para investigar:/i.test(cleaned)) continue;
-    return cleaned;
+function parseSongs(text, vidaSection){
+  const lines = text.split("\n").map(compact).filter(Boolean);
+  const songNums = [];
+  for(const line of lines){
+    const m = line.match(/canci[oó]n\s+(\d+)/i);
+    if(m) songNums.push(m[1]);
   }
-  return "";
+  const openingSong = extractSongAfter("palabras de introduccion", text) || songNums[0] || "";
+  const middleSong = extractSongAfter("nuestra vida cristiana", vidaSection || text) || songNums.find(n=>n !== openingSong) || "";
+  let closingSong = "";
+  for(let i=lines.length-1;i>=0;i--){
+    const m = lines[i].match(/canci[oó]n\s+(\d+)/i);
+    if(m){ closingSong = m[1]; break; }
+  }
+  return { openingSong, middleSong: middleSong === closingSong ? "" : middleSong, closingSong };
 }
 
-export async function fetchAndParseWOL({ wolUrl, proxyBase = null }){
+function parseMinutes(line){
+  const m = line.match(/\((\d+)\s*min/i);
+  return m ? Number(m[1]) : "";
+}
+
+function parseLinesFromSection(section){
+  return section.split("\n")
+    .map(compact)
+    .filter(Boolean)
+    .map(line=>line.replace(/^\d{1,2}:\d{2}\s+/, ""))
+    .filter(line=>/^\d+\s/.test(line) || /^#\s*estudio/i.test(line));
+}
+
+function parsePartLine(line){
+  const normalized = line.replace(/^#\s*/, "9 ");
+  const num = normalized.match(/^(\d+)\s+/)?.[1] || "";
+  let title = normalized.replace(/^\d+\s+/, "").trim();
+  const minutes = parseMinutes(title);
+  title = compact(title.replace(/\((\d+)\s*min[^)]*\)/i, ""));
+  return { num:Number(num||0), title, minutes };
+}
+
+function parseStudentType(title){
+  const n = norm(title);
+  if(n.includes("explique sus creencias") && n.includes("discurso")) return "Discurso de estudiante";
+  if(n.includes("discurso")) return "Discurso de estudiante";
+  return "Asignación estudiantil";
+}
+
+export async function fetchAndParseWOL({ wolUrl, proxyBase=null }){
   const url = buildFetchUrl(wolUrl, proxyBase);
   if(!url) throw new Error("Pegá un link de WOL.");
-
   const res = await fetch(url);
   if(!res.ok) throw new Error("No se pudo leer WOL.");
+  const html = await res.text();
+  const text = textFromHTML(html);
 
-  const raw = await res.text();
-  const text = normalizeText(raw);
-  const lines = text.split("\n").map(cleanLine).filter(Boolean);
+  const tes = sectionBetween(text, "TESOROS DE LA BIBLIA", ["SEAMOS MEJORES MAESTROS", "NUESTRA VIDA CRISTIANA"]);
+  const maes = sectionBetween(text, "SEAMOS MEJORES MAESTROS", ["NUESTRA VIDA CRISTIANA"]);
+  const vida = sectionBetween(text, "NUESTRA VIDA CRISTIANA", ["repaso de esta reunion", "palabras de conclusion", "repaso de esta reunión"]);
+  const songs = parseSongs(text, vida);
+  const reading = parseReading(text);
 
-  let reading = "";
-  let openingSong = "";
-  let middleSong = "";
-  let closingSong = "";
   const parts = [];
+  const tesLines = parseLinesFromSection(tes).map(parsePartLine);
+  if(tesLines[0]) parts.push({ section:"Tesoros de la Biblia", type:"Tesoros", title:tesLines[0].title || "Tesoros de la Biblia", minutes:tesLines[0].minutes || 10 });
+  if(tesLines[1]) parts.push({ section:"Tesoros de la Biblia", type:"Perlas", title:"Busquemos perlas escondidas", minutes:tesLines[1].minutes || 10 });
+  if(tesLines[2]) parts.push({ section:"Tesoros de la Biblia", type:"Lectura de la Biblia", title:`Lectura de la Biblia${reading ? " — " + reading : ""}`, minutes:tesLines[2].minutes || 4, detail: reading });
 
-  const readingLine = lines.find(l => /^##\s+[1-3]?\s*[A-ZÁÉÍÓÚÑ]/.test(l) && !/tesoros|seamos mejores maestros|nuestra vida cristiana/i.test(norm(l)));
-  if(readingLine) reading = compact(readingLine.replace(/^##\s+/, ""));
-
-  const openLine = lines.find(l => /^###\s*canci[oó]n\s+\d+\s+y\s+oraci[oó]n/i.test(norm(l)));
-  if(openLine){
-    const m = /canci[oó]n\s+(\d+)/i.exec(openLine);
-    openingSong = m ? m[1] : "";
+  const maesLines = parseLinesFromSection(maes).map(parsePartLine);
+  for(const row of maesLines){
+    if(!row.title) continue;
+    parts.push({ section:"Seamos mejores maestros", type:parseStudentType(row.title), title:row.title, minutes:row.minutes || "", needsHelper: !/discurso/i.test(norm(row.title)) });
   }
 
-  const closingLine = lines.find(l => /^###\s*palabras de conclusi/i.test(norm(l)));
-  if(closingLine){
-    const m = /canci[oó]n\s+(\d+)/i.exec(closingLine);
-    closingSong = m ? m[1] : "";
-  }
-
-  let section = "";
-  for(let i = 0; i < lines.length; i++){
-    const line = lines[i];
-    const lineNorm = norm(line);
-
-    if(/^##\s+tesoros de la biblia/i.test(lineNorm)){
-      section = "tesoros";
+  const vidaLines = parseLinesFromSection(vida).map(parsePartLine);
+  let ebcTitle = "";
+  for(const row of vidaLines){
+    const n = norm(row.title);
+    if(n.includes("cancion")) continue;
+    if(n.includes("estudio biblico de la congregacion")){
+      ebcTitle = row.title;
+      parts.push({ section:"Nuestra vida cristiana", type:"Conductor EBC", title:row.title, minutes:row.minutes || 30 });
+      parts.push({ section:"Nuestra vida cristiana", type:"Lector EBC", title:row.title, minutes:row.minutes || 30 });
       continue;
     }
-    if(/^##\s+seamos mejores maestros/i.test(lineNorm)){
-      section = "maestros";
-      continue;
-    }
-    if(/^##\s+nuestra vida cristiana/i.test(lineNorm)){
-      section = "vida";
-      continue;
-    }
-
-    if(section === "vida" && !middleSong && /^###\s*canci[oó]n\s+\d+$/i.test(lineNorm)){
-      const m = /canci[oó]n\s+(\d+)/i.exec(line);
-      middleSong = m ? m[1] : "";
-      continue;
-    }
-
-    const partMatch = /^###\s+(\d+)\.\s+(.+)$/.exec(line);
-    if(!partMatch) continue;
-
-    const num = Number(partMatch[1]);
-    const title = compact(partMatch[2]);
-    const minutes = parseMinutes(lines, i);
-    const contentLine = nextContentLine(lines, i);
-
-    if(section === "tesoros"){
-      if(num === 1) parts.push({ section:"Tesoros de la Biblia", type:"Tesoros", title, minutes: minutes || 10 });
-      if(num === 2) parts.push({ section:"Tesoros de la Biblia", type:"Perlas", title, minutes: minutes || 10 });
-      if(num === 3) parts.push({ section:"Tesoros de la Biblia", type:"Lectura de la Biblia", title: contentLine || title, minutes: minutes || 4 });
-      continue;
-    }
-
-    if(section === "maestros"){
-      const titleNorm = norm(title);
-      const type = titleNorm.includes("discurso") ? "Discurso de estudiante" : "Asignación estudiantil";
-      const finalTitle = contentLine ? `${title} — ${contentLine}` : title;
-      parts.push({ section:"Seamos mejores maestros", type, title: finalTitle, minutes: minutes || "", needsHelper: type !== "Discurso de estudiante" });
-      continue;
-    }
-
-    if(section === "vida"){
-      const titleNorm = norm(title);
-      if(titleNorm.includes("estudio biblico de la congregacion")){
-        parts.push({ section:"Nuestra vida cristiana", type:"Conductor EBC", title:"Estudio bíblico de la congregación", minutes: minutes || 30 });
-        parts.push({ section:"Nuestra vida cristiana", type:"Lector EBC", title:"Estudio bíblico de la congregación", minutes: minutes || 30 });
-      }else{
-        parts.push({
-          section:"Nuestra vida cristiana",
-          type: titleNorm.includes("necesidades de la congregacion") ? "Necesidades de la congregación" : "Nuestra vida cristiana",
-          title,
-          minutes: minutes || ""
-        });
-      }
-    }
-  }
-
-  if(!middleSong){
-    const songLines = lines.filter(l => /^###\s*canci[oó]n\s+\d+/i.test(norm(l))).map(l => ((/canci[oó]n\s+(\d+)/i.exec(l) || [])[1] || ""));
-    if(songLines.length >= 2) middleSong = songLines[1] || "";
-    if(songLines.length >= 3 && !closingSong) closingSong = songLines[2] || "";
+    const isNeeds = n.includes("necesidades de la congregacion");
+    parts.push({ section:"Nuestra vida cristiana", type:isNeeds ? "Necesidades de la congregación" : "Nuestra vida cristiana", title:row.title, minutes:row.minutes || "" });
   }
 
   markUnsaved("Se cargó el programa desde WOL.");
   return {
     parts,
-    meta: { reading, openingSong, middleSong, closingSong },
-    rawTextSample: text.slice(0, 1500)
+    meta: {
+      reading,
+      openingSong: songs.openingSong,
+      middleSong: songs.middleSong,
+      closingSong: songs.closingSong,
+      ebcTitle
+    },
+    rawTextSample: text.slice(0, 2000)
   };
 }

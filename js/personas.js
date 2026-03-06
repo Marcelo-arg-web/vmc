@@ -8,7 +8,6 @@ let people = [];
 let filtered = [];
 let currentId = null;
 let currentIndex = -1;
-let originalName = "";
 
 const CAP_KEYS = ["presidir","orar","tesoros","perlas","lecturaBiblia","estudiante","ayudante","discursoEstudiante","vidaCristiana","necesidades","conductorEbc","lectorEbc"];
 
@@ -16,19 +15,17 @@ function stripAccents(s){ return (s||"").normalize("NFD").replace(/[\u0300-\u036
 function guessSexByName(fullName){
   const n = normalizeName(fullName||"");
   const first = stripAccents((n.split(" ")[0]||"")).toLowerCase();
-  const fem = new Set(["erica","paola","carmen","gloria","belen","elida","ruth","carla","maria","ana","maricel","maricela"]);
-  const masc = new Set(["marcelo","sergio","leonardo","luis","eduardo","hugo","omar","epifanio","roberto","rodolfo","david","emanuel","martin","braian","brian","isaias","facundo"]);
+  const fem = new Set(["erica","paola","carmen","gloria","belen","elida","ruth","carla","maria","ana","maricel","maricela","florencia","cristina","monica","alejandra","correa","ximena"]);
+  const masc = new Set(["marcelo","sergio","leonardo","luis","eduardo","hugo","omar","epifanio","roberto","rodolfo","david","emanuel","martin","braian","brian","isaias","facundo","victor","jose"]);
   if(fem.has(first)) return "M";
   if(masc.has(first)) return "H";
   if(first.endsWith("a") && !["isaias","elias","matias","luca"].includes(first)) return "M";
   return "";
 }
 
-
-function findExistingByName(name){
-  const target = normalizeName(name || "").toLowerCase();
-  if(!target) return null;
-  return people.find(p => normalizeName(p.name || "").toLowerCase() === target) || null;
+function getPersonByNormalizedName(name){
+  const n = normalizeName(name).toLowerCase();
+  return people.find(p => normalizeName(p.name).toLowerCase() === n);
 }
 
 function showList(v){
@@ -53,10 +50,8 @@ function clearForm(){
   qs("#personForm").reset();
   qs("#active").checked = true;
   setCanToForm({});
-  originalName = "";
   qs("#btnDelete").style.display = "none";
   qs("#btnCancel").style.display = "none";
-  qs("#btnSubmit").textContent = "Agregar persona";
   updateNavInfo();
 }
 
@@ -64,7 +59,6 @@ function fillForm(p){
   currentId = p.id;
   currentIndex = filtered.findIndex(x=>x.id === p.id);
   qs("#formTitle").textContent = "Editar persona";
-  originalName = p.name || "";
   qs("#name").value = p.name || "";
   qs("#familyGroup").value = p.familyGroup || "";
   qs("#sex").value = p.sex || "";
@@ -77,7 +71,6 @@ function fillForm(p){
   setCanToForm(p.can || {});
   qs("#btnDelete").style.display = "inline-flex";
   qs("#btnCancel").style.display = "inline-flex";
-  qs("#btnSubmit").textContent = "Guardar cambios";
   updateNavInfo();
 }
 
@@ -113,10 +106,6 @@ function updateNavInfo(){
   else qs("#navInfo").textContent = `${filtered.length || people.length || 0} cargados`;
 }
 
-function statusText(s){
-  qs("#status").textContent = s;
-}
-
 function goPrev(){
   if(!filtered.length) return;
   const idx = currentIndex <= 0 ? filtered.length - 1 : currentIndex - 1;
@@ -136,40 +125,21 @@ async function reload(){
 }
 
 qs("#name").addEventListener("blur", ()=>{
-  const entered = qs("#name").value;
-  if(!qs("#sex").value){
-    const g = guessSexByName(entered);
-    if(g) qs("#sex").value = g;
-  }
-  const existing = findExistingByName(entered);
+  const existing = getPersonByNormalizedName(qs("#name").value);
   if(existing && existing.id !== currentId){
     fillForm(existing);
-    statusText(`Ese nombre ya existe. Abrí la persona cargada para editarla.`);
-  }
-});
-
-qs("#name").addEventListener("input", ()=>{
-  const typed = qs("#name").value;
-  const existing = findExistingByName(typed);
-  if(existing && existing.id !== currentId){
-    qs("#btnSubmit").textContent = "Guardar cambios";
-    statusText("Ese nombre ya existe. Se editará la persona cargada, no se duplicará.");
+    qs("#status").textContent = "Nombre existente: se abrió para editar.";
     return;
   }
-  if(currentId){
-    qs("#btnSubmit").textContent = "Guardar cambios";
-  }else{
-    qs("#btnSubmit").textContent = "Agregar persona";
-  }
+  if(qs("#sex").value) return;
+  const g = guessSexByName(qs("#name").value);
+  if(g) qs("#sex").value = g;
 });
 
 qs("#personForm").addEventListener("submit", async (e)=>{
   e.preventDefault();
-  const duplicate = findExistingByName(qs("#name").value);
-  const editingExisting = duplicate && duplicate.id !== currentId ? duplicate.id : currentId;
-  const addingMode = !editingExisting;
   const person = {
-    id: editingExisting || null,
+    id: currentId,
     name: qs("#name").value,
     familyGroup: qs("#familyGroup").value,
     sex: qs("#sex").value,
@@ -182,19 +152,14 @@ qs("#personForm").addEventListener("submit", async (e)=>{
     notes: qs("#notes").value
   };
   if(!normalizeName(person.name)){ alert("Escribí el nombre."); return; }
-  if(duplicate && duplicate.id !== currentId){
-    statusText("Ese nombre ya existía. Se guardaron cambios sobre la persona existente.");
-  }
-  await savePerson(person);
-  await reload();
-  if(addingMode){
-    clearForm();
-    qs("#name").focus();
-    statusText(`Agregado: ${normalizeName(person.name)}`);
-  }else{
-    const saved = people.find(p=>p.id === person.id) || people.find(p=>p.name === normalizeName(person.name));
+  try{
+    const savedId = await savePerson(person);
+    await reload();
+    const saved = people.find(p=>p.id === savedId) || getPersonByNormalizedName(person.name);
     if(saved) fillForm(saved); else clearForm();
-    statusText(`Actualizado: ${normalizeName(person.name)}`);
+    qs("#status").textContent = "Guardado";
+  }catch(err){
+    alert(err.message || "No se pudo guardar.");
   }
 });
 
@@ -206,7 +171,6 @@ qs("#btnDelete").addEventListener("click", async ()=>{
   await reload();
 });
 qs("#btnCancel").addEventListener("click", clearForm);
-qs("#btnNew").addEventListener("click", ()=>{ clearForm(); qs("#name").focus(); statusText("Modo agregar: cargá la nueva persona."); });
 qs("#btnPrev").addEventListener("click", goPrev);
 qs("#btnNext").addEventListener("click", goNext);
 qs("#btnShowList").addEventListener("click", ()=>showList(true));

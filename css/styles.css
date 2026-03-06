@@ -136,22 +136,19 @@ footer{padding:20px 0; color:var(--muted); font-size:12px}
 label.row{align-items:center}
 
 
-.week-chip{display:inline-flex; margin:6px 0 4px; padding:8px 14px; border-radius:999px; background:linear-gradient(135deg,#1d4ed8,#0f766e); color:#fff; font-weight:800; box-shadow:0 10px 22px rgba(29,78,216,.18)}
-.semana-head{align-items:flex-start}
-.wide-section{padding-bottom:18px}
-.assign-section{margin-top:14px; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fbfdff}
-.assign-section-title{padding:10px 12px; font-size:13px; font-weight:900; letter-spacing:.3px; text-transform:uppercase; color:#0f172a; background:linear-gradient(90deg,#dbeafe,#eef2ff)}
-#asgBox .table{border:none; border-radius:0}
-#asgBox .table th{background:#eff6ff}
-#asgBox .table tr:nth-child(even) td{background:#fcfdff}
-
-
-.week-page{max-width:1400px;}
-.week-page .card{width:100%;}
-.week-page #asgBox .table th:nth-child(1){width:16%;}
-.week-page #asgBox .table th:nth-child(2){width:40%;}
-.week-page #asgBox .table th:nth-child(3),
-.week-page #asgBox .table th:nth-child(4){width:22%;}
-@media (min-width: 1100px){
-  .week-page .wide-section{padding:18px;}
-}
+.page-wide{max-width:1280px}
+.week-nav-card{padding-bottom:10px}
+.week-chip-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px}
+.week-chip{background:#fff; color:var(--text); border:1px solid var(--line); border-radius:999px; padding:8px 12px; font-weight:700}
+.week-chip.active{background:#e8efff; border-color:#9db5ff; color:#1e40af}
+.assign-group{border:1px solid var(--line); border-radius:16px; overflow:hidden; margin-top:14px}
+.assign-group-title{background:#f8fafc; padding:12px 14px; font-weight:800; font-size:15px; border-bottom:1px solid var(--line)}
+.assign-row{display:grid; grid-template-columns: 1.15fr 1.8fr 1fr 1fr; gap:12px; padding:12px 14px; border-bottom:1px solid var(--line); align-items:center}
+.assign-row:last-child{border-bottom:none}
+.assign-type{font-weight:800}
+.assign-sub{font-size:12px; color:var(--muted); margin-top:3px}
+.detected-row{display:grid; grid-template-columns:36px 1fr; gap:12px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--line)}
+.detected-row:last-child{border-bottom:none}
+.detected-no{width:30px; height:30px; border-radius:50%; background:#eef2ff; color:#1d4ed8; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px}
+.detected-title{font-weight:700}
+@media (max-width: 900px){.assign-row{grid-template-columns:1fr}.page-wide{max-width:1100px}}

@@ -26,18 +26,24 @@
     </div>
   </div>
 
-  <div class="container week-page">
-    <div class="card">
-      <div class="row space semana-head">
+  <div class="container page-wide">
+    <div class="card week-nav-card">
+      <div class="row space" style="gap:14px">
         <div>
           <h2>Semana</h2>
-          <div class="week-chip" id="weekLabel">—</div>
-          <div class="small">Fecha base: <b id="weekPretty">—</b></div>
+          <div class="small">Fecha actual: <b id="weekPretty">—</b></div>
         </div>
-        <input id="weekISO" type="date" />
+        <div class="row" style="justify-content:flex-end">
+          <button id="btnPrevWeek" class="ghost" type="button">← Anterior</button>
+          <input id="weekISO" type="date" />
+          <button id="btnNextWeek" class="ghost" type="button">Siguiente →</button>
+        </div>
       </div>
+      <div class="week-chip-row" id="weekChips"></div>
+    </div>
 
-      <div class="grid cols-3" style="margin-top:12px">
+    <div class="card" style="margin-top:14px">
+      <div class="grid cols-3" style="margin-top:6px">
         <div>
           <div class="small">Día</div>
           <input id="meetingDay" style="width:100%" placeholder="jueves" />
@@ -109,16 +115,14 @@
       <div class="small" id="status" style="margin-top:10px">—</div>
     </div>
 
-    <div class="card wide-section" style="margin-top:14px">
+    <div class="card" style="margin-top:14px">
       <h2>Asignaciones</h2>
-      <div class="small">Cargá o ajustá todos los participantes de la semana. Esta sección ocupa todo el ancho para trabajar más cómodo.</div>
-      <div id="asgBox" style="margin-top:10px"></div>
+      <div id="asgBox"></div>
     </div>
 
     <div class="card" style="margin-top:14px">
       <h2>Programa detectado</h2>
-      <div class="small">Queda debajo para visualizar mejor el formulario principal.</div>
-      <div id="partsBox" style="margin-top:10px"></div>
+      <div id="partsBox"></div>
     </div>
   </div>
 

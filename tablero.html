@@ -27,11 +27,11 @@
     </div>
   </div>
 
-  <div class="container">
+  <div class="container page-wide">
     <div class="row space no-print">
       <div>
-        <h2>Tablero</h2>
-        <div class="small">Impresión doble de semanas: <b id="weekPretty">—</b></div>
+        <h2>Hoja para tablero / WhatsApp</h2>
+        <div class="small">Se muestran la semana seleccionada y la siguiente.</div>
       </div>
       <div class="row">
         <button id="btnPrint" class="secondary">Imprimir</button>
@@ -40,8 +40,11 @@
 
     <div id="boardWrap">
       <div id="board">
-        <div class="print-banner">Vida y Ministerio Cristianos · Formato para WhatsApp y tablero</div>
-        <div id="boardList" class="week-stack"></div>
+        <div class="board-header">
+          <div class="cong" id="cong">CONG.: VILLA FIAD</div>
+          <div class="board-title">Programa para la reunión de entre semana</div>
+        </div>
+        <div id="weeksContainer"></div>
       </div>
     </div>
   </div>

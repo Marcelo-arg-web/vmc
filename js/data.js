@@ -12,8 +12,9 @@ export async function loadPeople(){
 
 export async function savePerson(person){
   await ensureInit();
+  const normalized = normalizeName(person.name);
   const payload = {
-    name: normalizeName(person.name),
+    name: normalized,
     sex: person.sex || "",
     role: person.role || "",
     student: !!person.student,
@@ -25,9 +26,23 @@ export async function savePerson(person){
     notes: person.notes || "",
     updatedAt: new Date().toISOString()
   };
-  if(person.id) await updateDoc(doc(db(), "personas", person.id), payload);
-  else await addDoc(collection(db(), "personas"), payload);
+
+  const people = await loadPeople();
+  const existing = people.find(p => normalizeName(p.name).toLowerCase() === normalized.toLowerCase());
+  if(person.id){
+    if(existing && existing.id !== person.id) throw new Error("Ya existe una persona con ese nombre.");
+    await updateDoc(doc(db(), "personas", person.id), payload);
+    markUnsaved("Se modificaron personas.");
+    return person.id;
+  }
+  if(existing){
+    await updateDoc(doc(db(), "personas", existing.id), payload);
+    markUnsaved("Se modificaron personas.");
+    return existing.id;
+  }
+  const ref = await addDoc(collection(db(), "personas"), payload);
   markUnsaved("Se modificaron personas.");
+  return ref.id;
 }
 
 export async function deletePerson(personId){

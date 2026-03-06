@@ -1,6 +1,6 @@
 export const APP = {
   name: "Planificador VMC",
-  version: "2.0.1"
+  version: "2.1.0"
 };
 
 export const Storage = {
@@ -23,17 +23,60 @@ export function todayISO(){
   return tz.toISOString().slice(0,10);
 }
 
-export function fmtDateAR(iso){
-  if(!iso) return "";
+export function parseISO(iso){
+  if(!iso) return null;
   const [y,m,dd] = iso.split("-").map(Number);
-  const d = new Date(y, m-1, dd);
+  return new Date(y, (m||1)-1, dd||1);
+}
+
+export function fmtDateAR(iso){
+  const d = parseISO(iso);
+  if(!d || isNaN(d)) return "";
   return d.toLocaleDateString("es-AR", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
 }
 
+export function fmtDateTitle(iso){
+  const d = parseISO(iso);
+  if(!d || isNaN(d)) return "";
+  return d.toLocaleDateString("es-AR", { day:"numeric", month:"long", year:"numeric" });
+}
+
+export function fmtDayChip(iso){
+  const d = parseISO(iso);
+  if(!d || isNaN(d)) return "";
+  return d.toLocaleDateString("es-AR", { weekday:"short", day:"numeric" }).replace(".","");
+}
+
 export function dayNameFromISO(iso){
-  if(!iso) return "";
-  const [y,m,dd] = iso.split("-").map(Number);
-  return new Date(y,m-1,dd).toLocaleDateString("es-AR", { weekday:"long" });
+  const d = parseISO(iso);
+  if(!d || isNaN(d)) return "";
+  return d.toLocaleDateString("es-AR", { weekday:"long" });
+}
+
+export function addDaysISO(iso, days){
+  const d = parseISO(iso);
+  if(!d || isNaN(d)) return iso;
+  d.setDate(d.getDate() + days);
+  const tz = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return tz.toISOString().slice(0,10);
+}
+
+export function monthWeekOptions(iso){
+  const d = parseISO(iso) || parseISO(todayISO());
+  const targetDow = d.getDay();
+  const month = d.getMonth();
+  const year = d.getFullYear();
+  const first = new Date(year, month, 1);
+  const out = [];
+  for(let day=1; day<=31; day++){
+    const cur = new Date(year, month, day);
+    if(cur.getMonth() !== month) break;
+    if(cur.getDay() === targetDow){
+      const tz = new Date(cur.getTime() - cur.getTimezoneOffset()*60000);
+      out.push(tz.toISOString().slice(0,10));
+    }
+  }
+  return out;
 }
 
 export function normalizeName(s){
@@ -82,24 +125,4 @@ export function weeksBetween(aISO, bISO){
   const a = new Date(aISO+"T00:00:00");
   const b = new Date(bISO+"T00:00:00");
   return Math.floor(Math.abs(b - a) / 604800000);
-}
-
-
-export function addDaysISO(iso, days){
-  if(!iso) return "";
-  const [y,m,dd] = iso.split("-").map(Number);
-  const d = new Date(y, m-1, dd);
-  d.setDate(d.getDate() + Number(days || 0));
-  const tz = new Date(d.getTime() - d.getTimezoneOffset()*60000);
-  return tz.toISOString().slice(0,10);
-}
-
-export function shortWeekLabel(iso, meetingDay=""){
-  if(!iso) return "";
-  const [y,m,dd] = iso.split("-").map(Number);
-  const d = new Date(y, m-1, dd);
-  const wd = (meetingDay || d.toLocaleDateString("es-AR", { weekday:"long" })).trim();
-  const day = d.toLocaleDateString("es-AR", { day:"numeric" });
-  const month = d.toLocaleDateString("es-AR", { month:"long" });
-  return `${wd} ${day} de ${month}`;
 }
