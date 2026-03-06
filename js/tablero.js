@@ -9,13 +9,20 @@ const nextWeek = addDaysISO(currentWeek, 7);
 
 function byType(asg, type){ return asg.find(x=>x.type===type); }
 function rowsByType(asg, types){ return asg.filter(x=>types.includes(x.type)); }
-function esc(s){ return String(s || "—").replace(/[&<>\"]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
+function esc(s){ return String(s || "—").replace(/[&<>"]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;"}[m])); }
 
-function initialsForSection(type){
-  if(type === "Tesoros") return "1";
-  if(type === "Perlas") return "2";
-  if(type === "Lectura de la Biblia") return "3";
-  return "";
+function rowHtml({time="", topic="", assigned="", helper="", number="", single=false}){
+  const assignHtml = helper || number
+    ? `<div class="asg-pair"><div class="asg-main">${esc(assigned || '—')}</div><div class="asg-num">${esc(number || '')}</div><div class="asg-help">${esc(helper || '')}</div></div>`
+    : `<div class="asg-solo">${esc(assigned || '—')}</div>`;
+  return `<tr><td class="cell-time">${esc(time)}</td><td class="cell-bullet">•</td><td class="cell-topic">${esc(topic)}</td><td class="cell-assign">${assignHtml}</td></tr>`;
+}
+
+function sectionTable(sectionClass, sectionTitle, rows, hint=""){
+  return `
+    <div class="section-band ${sectionClass}">${sectionTitle}</div>
+    ${hint ? `<div class="section-hint">${hint}</div>` : ''}
+    <table class="program-table"><tbody>${rows.join('')}</tbody></table>`;
 }
 
 function buildWeekSheet(weekISO, app, w, asg){
@@ -35,21 +42,31 @@ function buildWeekSheet(weekISO, app, w, asg){
   const conductor = byType(asg, "Conductor EBC");
   const lector = byType(asg, "Lector EBC");
 
-  const studentRight = students.map((r, idx)=>`
-    <div class="asg-row${r.person2Name ? '' : ' single'}">
-      <div class="asg-name">${esc(r.person1Name || '—')}</div>
-      <div class="asg-num">${idx+4}</div>
-      <div>${r.person2Name ? esc(r.person2Name) : ''}</div>
-    </div>`).join("");
+  const inicioRows = [
+    rowHtml({time:w.meetingTime || '19:30', topic:`Canción ${w.openingSong || '—'}`, assigned:''}),
+    rowHtml({topic:'Palabras de introducción (1 min.)', assigned:pres}),
+  ];
 
-  const tesRight = `
-    <div class="asg-caption">Auditorio principal</div>
-    <div class="asg-name">${esc(tes?.person1Name || '—')}</div>
-    <div class="asg-name">${esc(per?.person1Name || '—')}</div>
-    <div class="asg-row single"><div><span class="asg-name">${esc(lec?.person1Name || '—')}</span> <span class="asg-num">3</span></div></div>`;
+  const tesorosRows = [
+    rowHtml({topic:`${tes?.title || 'Tesoros de la Biblia'}${tes?.minutes ? ` (${tes.minutes} mins.)` : ''}`, assigned: tes?.person1Name}),
+    rowHtml({topic:`Busquemos perlas escondidas${per?.minutes ? ` (${per.minutes} mins.)` : ''}`, assigned: per?.person1Name}),
+    rowHtml({topic:`${lec?.title || 'Lectura de la Biblia'}${lec?.minutes ? ` (${lec.minutes} mins.)` : ''}`, assigned: lec?.person1Name, number:'3'}),
+  ];
 
-  const vidaRows = vida.map(r=>`<div class="asg-name">${esc(r.person1Name || '—')}</div>`).join("");
-  const ebcLabel = conductor || lector ? `<div class="footer-line"><div>Conductor/Lector: <b>${esc(conductor?.person1Name || '—')}</b> / ${esc(lector?.person1Name || '—')}</div><div class="right">Oración: ${esc(or2)}</div></div>` : `<div class="footer-line"><div></div><div class="right">Oración: ${esc(or2)}</div></div>`;
+  const studentRows = students.length ? students.map((r, idx)=> rowHtml({
+    topic:`${r.title || r.type}${r.minutes ? ` (${r.minutes} mins.)` : ''}`,
+    assigned:r.person1Name,
+    helper:r.person2Name,
+    number:String(idx+4)
+  })) : [rowHtml({topic:'Sin asignaciones estudiantiles detectadas', assigned:''})];
+
+  const vidaRows = [
+    rowHtml({topic:`Canción ${w.middleSong || '—'}`, assigned:''}),
+    ...(vida.length ? vida.map(r=>rowHtml({topic:`${r.title || r.type}${r.minutes ? ` (${r.minutes} mins.)` : ''}`, assigned:r.person1Name})) : [rowHtml({topic:'Sin parte previa al estudio', assigned:''})]),
+    ...(conductor ? [rowHtml({topic:`${conductor.title || 'Estudio bíblico de la congregación'} (${conductor.minutes || 30} mins.)`, assigned: conductor.person1Name, helper: lector?.person1Name, number:'L'})] : []),
+    rowHtml({topic:'Repaso de esta reunión, adelanto de la próxima y anuncios (3 mins.)', assigned:pres}),
+    rowHtml({topic:`Canción ${w.closingSong || '—'}`, assigned:or2}),
+  ];
 
   return `
   <div class="week-sheet">
@@ -64,57 +81,54 @@ function buildWeekSheet(weekISO, app, w, asg){
       </div>
     </div>
 
-    <div class="program-grid">
-      <div>
-        <div class="lines">
-          <div class="line"><div class="time">${esc(w.meetingTime || '19:30')}</div><div class="dot">•</div><div class="topic">Canción ${esc(w.openingSong || '—')}</div></div>
-          <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">Palabras de introducción (1 min.)</div></div>
-        </div>
+    ${sectionTable('tesoros', 'INICIO Y TESOROS DE LA BIBLIA', [...inicioRows, ...tesorosRows], 'Auditorio principal')}
+    ${sectionTable('maestros', 'SEAMOS MEJORES MAESTROS', studentRows, 'Titular / Nº / Ayudante')}
+    ${sectionTable('vida', 'NUESTRA VIDA CRISTIANA', vidaRows, conductor ? 'Asignado / Lector' : '')}
 
-        <div class="section-band tesoros">TESOROS DE LA BIBLIA</div>
-        <div class="lines">
-          <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(tes?.title || '—')}${tes?.minutes ? ` (${tes.minutes} mins.)` : ''}</div></div>
-          <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">Busquemos perlas escondidas${per?.minutes ? ` (${per.minutes} mins.)` : ''}</div></div>
-          <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(lec?.title || 'Lectura de la Biblia')}${lec?.minutes ? ` (${lec.minutes} mins.)` : ''}</div></div>
-        </div>
-
-        <div class="section-band maestros">SEAMOS MEJORES MAESTROS</div>
-        <div class="lines">
-          ${students.map(r=>`<div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(r.title || r.type)}${r.minutes ? ` (${r.minutes} mins.)` : ''}</div></div>`).join('')}
-        </div>
-
-        <div class="section-band vida">NUESTRA VIDA CRISTIANA</div>
-        <div class="lines">
-          <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">Canción ${esc(w.middleSong || '—')}</div></div>
-          ${vida.map(r=>`<div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(r.title || r.type)}${r.minutes ? ` (${r.minutes} mins.)` : ''}</div></div>`).join('')}
-          ${conductor ? `<div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(conductor.title || 'Estudio bíblico de la congregación')} (${esc(conductor.minutes || 30)} mins.)</div></div>` : ''}
-          <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">Repaso de esta reunión, adelanto de la próxima y anuncios (3 mins.)</div></div>
-          <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">Canción ${esc(w.closingSong || '—')}</div></div>
-        </div>
-      </div>
-
-      <div>
-        <div class="asg-block">${tesRight}</div>
-        <div style="height:18px"></div>
-        <div class="asg-block">
-          <div class="asg-caption">Auditorio principal</div>
-          ${studentRight || '<div class="asg-name">—</div>'}
-        </div>
-        <div style="height:22px"></div>
-        <div class="asg-block">${vidaRows || '<div class="asg-name">—</div>'}</div>
-      </div>
-    </div>
-    ${ebcLabel}
+    <div class="footer-line"><div></div><div class="right">Oración final: ${esc(or2)}</div></div>
   </div>`;
+}
+
+async function exportBoardAsImage(){
+  const board = qs('#board');
+  const styles = Array.from(document.querySelectorAll('style,link[rel="stylesheet"]')).map(el=>el.outerHTML).join('');
+  const clone = board.cloneNode(true);
+  const wrapper = document.createElement('div');
+  wrapper.appendChild(clone);
+  const html = `<!doctype html><html><head><meta charset="utf-8">${styles}</head><body class="image-exporting">${wrapper.innerHTML}</body></html>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="${Math.ceil(board.scrollHeight * 1400 / board.scrollWidth)}"><foreignObject width="100%" height="100%">${html.replace(/&/g, '&amp;').replace(/#/g, '%23')}</foreignObject></svg>`;
+  const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = ()=>{
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(blob=>{
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `tablero_${currentWeek || 'semana'}.png`;
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+    }, 'image/png');
+  };
+  img.onerror = ()=>{ URL.revokeObjectURL(url); alert('No se pudo generar la imagen en este navegador.'); };
+  img.src = url;
 }
 
 async function load(){
   const app = await loadAppSettings();
-  qs("#cong").textContent = `CONG.: \"${String(app.congregacion || "Villa Fiad").toUpperCase()}\"`;
+  qs("#cong").textContent = `CONG.: "${String(app.congregacion || "Villa Fiad").toUpperCase()}"`;
   const weeks = [currentWeek, nextWeek].filter(Boolean);
   const data = await Promise.all(weeks.map(async iso => ({ iso, w: await loadWeek(iso), asg: await loadAssignments(iso) })));
   qs("#weeksContainer").innerHTML = data.map(x=>buildWeekSheet(x.iso, app, x.w, x.asg)).join("");
 }
 
 qs("#btnPrint").addEventListener("click", ()=>window.print());
+qs("#btnExportImage").addEventListener("click", exportBoardAsImage);
 load();
