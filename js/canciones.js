@@ -62,7 +62,7 @@ export const canciones = {
 60: "Hay vidas en juego",
 61: "¡Avancen, Testigos!",
 62: "La nueva canción",
-63: "¿Soy testigo de Jehová?",
+63: "¡Soy testigo de Jehová!",
 64: "Participemos con gozo en la cosecha",
 65: "Lucha por progresar",
 66: "Proclamemos las buenas noticias",
