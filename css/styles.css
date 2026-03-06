@@ -50,8 +50,9 @@ a:hover{text-decoration:underline}
 .grid{display:grid; gap:14px}
 .grid.cols-2{grid-template-columns: repeat(2, minmax(0,1fr))}
 .grid.cols-3{grid-template-columns: repeat(3, minmax(0,1fr))}
+.grid.cols-4{grid-template-columns: repeat(4, minmax(0,1fr))}
 @media (max-width: 900px){
-  .grid.cols-2,.grid.cols-3{grid-template-columns: 1fr}
+  .grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns: 1fr}
 }
 
 .card{
@@ -134,3 +135,8 @@ footer{padding:20px 0; color:var(--muted); font-size:12px}
 
 .table select, .table input{width:100%}
 label.row{align-items:center}
+
+.sectionTitleMini{margin:10px 0 8px; font-size:13px; font-weight:900; color:#111827; border-bottom:2px solid #e5e7eb; padding-bottom:4px}
+.table.compact th, .table.compact td{padding:8px 8px}
+.tiny{font-size:11px; color:var(--muted); margin-top:3px}
+.asg-group + .asg-group{margin-top:12px}
