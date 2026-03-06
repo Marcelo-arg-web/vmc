@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Configuración — Planificador VMC</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  
+</head>
+<body>
+  <div class="topbar">
+    <div class="container nav">
+      <div class="brand">
+        <span id="appName">Planificador VMC</span>
+        <span class="badge" id="appVersion"></span>
+        <span class="badge" id="authStatus">—</span>
+      </div>
+      <div class="navlinks">
+        <a href="index.html">Inicio</a>
+        <a href="semana.html">Semana</a>
+        <a href="personas.html">Personas</a>
+        <a href="tablero.html">Tablero</a>
+        <a href="settings.html">Configuración</a>
+        <a href="login.html">Login</a>
+        <button id="btnLogout" class="ghost" style="display:none">Salir</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    
+<div class="grid cols-2">
+  <div class="card">
+    <h2>Firebase Config</h2>
+    <p>Pegá acá tu <span class="kbd">firebaseConfig</span> (JSON). Se guarda en tu navegador (localStorage).</p>
+    <textarea id="cfg" spellcheck="false" placeholder='{"apiKey":"...","authDomain":"...","projectId":"..."}'></textarea>
+    <div class="small">Tip: en Firebase Console → Project settings → Your apps → SDK setup and configuration.</div>
+  </div>
+
+  <div class="card">
+    <h2>Proxy (opcional)</h2>
+    <p>Si un día falla el mirror, podés usar un Proxy propio (por ejemplo Cloudflare Worker).</p>
+    <div class="small">Formato:</div>
+    <div class="notice"><span class="kbd">https://TU-WORKER.workers.dev/?url=</span></div>
+    <input id="proxy" placeholder="(opcional) pega tu proxy base" style="width:100%" />
+    <hr/>
+    <button id="btnSaveCfg" class="success">Guardar configuración</button>
+    <div id="msg" class="small" style="margin-top:8px"></div>
+  </div>
+</div>
+
+    <footer>
+      <div>Consejo: guardá la semana antes de pasar a otra. Si ves “No guardado”, no cambies de semana hasta guardar.</div>
+    </footer>
+  </div>
+
+  <script type="module" src="js/settings.js"></script>
+</body>
+</html>

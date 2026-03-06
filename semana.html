@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Semana — Planificador VMC</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  
+</head>
+<body>
+  <div class="topbar">
+    <div class="container nav">
+      <div class="brand">
+        <span id="appName">Planificador VMC</span>
+        <span class="badge" id="appVersion"></span>
+        <span class="badge" id="authStatus">—</span>
+      </div>
+      <div class="navlinks">
+        <a href="index.html">Inicio</a>
+        <a href="semana.html">Semana</a>
+        <a href="personas.html">Personas</a>
+        <a href="tablero.html">Tablero</a>
+        <a href="settings.html">Configuración</a>
+        <a href="login.html">Login</a>
+        <button id="btnLogout" class="ghost" style="display:none">Salir</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    
+<div class="card">
+  <div class="row space">
+    <div>
+      <h2>Semana</h2>
+      <div class="small">Fecha: <b id="weekPretty">—</b></div>
+    </div>
+    <div class="row">
+      <input id="weekISO" type="date" />
+    </div>
+  </div>
+
+  <hr/>
+
+  <div class="grid cols-2">
+    <div>
+      <div class="small">Link WOL</div>
+      <input id="wolLink" style="width:100%" placeholder="https://wol.jw.org/..." />
+      <div class="row" style="margin-top:10px">
+        <button id="btnLoadWOL">Cargar programa desde WOL</button>
+        <button id="btnSuggest" class="secondary">Sugerir asignados</button>
+        <button id="btnSave" class="success">Guardar semana</button>
+        <button id="btnToBoard" class="ghost">Ver tablero</button>
+      </div>
+      <div id="msg" class="notice" style="display:none; margin-top:10px"></div>
+      <div class="small" id="status" style="margin-top:10px">—</div>
+    </div>
+    <div class="notice warn">
+      <b>Edición manual:</b> podés cambiar el título de cualquier parte (videos, viajante, necesidad urgente).<br/>
+      <b>Advertencia:</b> si cambiás de semana sin guardar, el sistema te avisa.
+    </div>
+  </div>
+</div>
+
+<div class="grid cols-2" style="margin-top:14px">
+  <div class="card">
+    <h2>Programa detectado</h2>
+    <div id="partsBox"></div>
+  </div>
+  <div class="card">
+    <h2>Asignaciones</h2>
+    <div id="asgBox"></div>
+  </div>
+</div>
+
+    <footer>
+      <div>Consejo: guardá la semana antes de pasar a otra. Si ves “No guardado”, no cambies de semana hasta guardar.</div>
+    </footer>
+  </div>
+
+  <script type="module" src="js/semana.js"></script>
+</body>
+</html>
