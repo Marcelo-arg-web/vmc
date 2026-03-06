@@ -21,6 +21,21 @@ let parts = [];
 let assignments = [];
 let appSettings = {};
 
+function makeBaseParts(){
+  return [
+    { section:"Tesoros de la Biblia", type:"Tesoros", title:"Tesoros de la Biblia", minutes:10 },
+    { section:"Tesoros de la Biblia", type:"Perlas", title:"Busquemos perlas escondidas", minutes:10 },
+    { section:"Tesoros de la Biblia", type:"Lectura de la Biblia", title:"Lectura de la Biblia", minutes:4 },
+    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Seamos mejores maestros 1", needsHelper:true },
+    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Seamos mejores maestros 2", needsHelper:true },
+    { section:"Seamos mejores maestros", type:"Asignación estudiantil", title:"Seamos mejores maestros 3", needsHelper:true },
+    { section:"Nuestra vida cristiana", type:"Nuestra vida cristiana", title:"Nuestra vida cristiana 1" },
+    { section:"Nuestra vida cristiana", type:"Nuestra vida cristiana", title:"Nuestra vida cristiana 2" },
+    { section:"Nuestra vida cristiana", type:"Conductor EBC", title:"Estudio bíblico de la congregación" },
+    { section:"Nuestra vida cristiana", type:"Lector EBC", title:"Estudio bíblico de la congregación" }
+  ];
+}
+
 function currentWeek(){ return weekInput.value; }
 function show(s, kind="ok"){ msg.className = "notice " + (kind==="ok"?"ok":kind==="warn"?"warn":"err"); msg.textContent=s; msg.style.display="block"; }
 function hideMsg(){ msg.style.display="none"; }
@@ -84,7 +99,7 @@ async function loadAll(){
   fields.closingSong.value = w?.closingSong || "";
   fields.travelerName.value = w?.travelerName || appSettings.travelerName || "Roberto Armando";
   fields.travelerTalkTitle.value = w?.travelerTalkTitle || "Discurso de servicio del viajante";
-  parts = w?.parts || [];
+  parts = (w?.parts && w.parts.length) ? w.parts : makeBaseParts();
 
   maybeApplyNoMeetingDefaults();
   applyAppDefaults();
@@ -97,6 +112,7 @@ async function loadAll(){
 function buildDefaultAssignments(){
   if(isNoMeeting()) return [];
   const rows = [];
+  if(!parts.length) parts = makeBaseParts();
   let order = 0;
   rows.push({ order:++order, key:"presidente", type:"Presidente", title:"Palabras de introducción y conclusión" });
   rows.push({ order:++order, key:"oracion_inicial", type:"Oración inicial", title:"Oración inicial" });
@@ -123,7 +139,7 @@ function renderParts(){
     partsBox.innerHTML = `<div class="notice warn">Esta semana no hay reunión. Motivo: <b>${fields.specialReason.value || fields.weekType.options[fields.weekType.selectedIndex].text}</b></div>`;
     return;
   }
-  if(!parts.length){ partsBox.innerHTML = "<div class='small'>Sin programa cargado todavía.</div>"; return; }
+  if(!parts.length) parts = makeBaseParts();
   const t = document.createElement("table");
   t.className = "table";
   t.innerHTML = "<thead><tr><th>Sección</th><th>Parte</th><th>Título</th><th>Min</th></tr></thead><tbody></tbody>";
@@ -192,11 +208,12 @@ function applyWeekTypeEffects(){
   if(isTravelerVisit()){
     assignments = assignments.filter(x=>!["Conductor EBC","Lector EBC"].includes(x.type));
     if(!parts.some(x=>x.type === "Discurso del viajante")){
-      parts = parts.filter(x=>!["Conductor EBC","Lector EBC"].includes(x.type));
+      parts = (parts.length ? parts : makeBaseParts()).filter(x=>!["Conductor EBC","Lector EBC","Discurso del viajante"].includes(x.type));
       parts.push({ section:"Nuestra vida cristiana", type:"Discurso del viajante", title: fields.travelerTalkTitle.value || "Discurso de servicio del viajante", minutes:30 });
       assignments = buildDefaultAssignments();
     }
   } else if(!isNoMeeting()){
+    if(!parts.length) parts = makeBaseParts();
     const hasEbc = parts.some(x=>x.type === "Conductor EBC");
     const hasTraveler = parts.some(x=>x.type === "Discurso del viajante");
     if(hasTraveler && !hasEbc){
@@ -251,7 +268,7 @@ qs("#btnLoadWOL").addEventListener("click", async ()=>{
   if(!wolUrl) return show("Pegá el link de WOL.", "warn");
   try{
     const result = await fetchAndParseWOL({ wolUrl, proxyBase: Storage.get("proxyBase", "") || null });
-    parts = result.parts;
+    parts = result.parts?.length ? result.parts : makeBaseParts();
     fields.reading.value = result.meta.reading || fields.reading.value;
     fields.openingSong.value = result.meta.openingSong || fields.openingSong.value;
     fields.middleSong.value = result.meta.middleSong || fields.middleSong.value;
@@ -259,7 +276,12 @@ qs("#btnLoadWOL").addEventListener("click", async ()=>{
     assignments = buildDefaultAssignments();
     applyWeekTypeEffects();
     show("Programa cargado desde WOL.");
-  }catch(e){ show(e?.message || String(e), "err"); }
+  }catch(e){
+    parts = makeBaseParts();
+    assignments = buildDefaultAssignments();
+    applyWeekTypeEffects();
+    show("No se pudo leer WOL. Dejé el formulario completo para cargar todo manualmente.", "warn");
+  }
 });
 
 qs("#btnSuggest").addEventListener("click", suggest);
