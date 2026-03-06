@@ -1,6 +1,6 @@
 export const APP = {
   name: "Planificador VMC",
-  version: "1.3.0"
+  version: "1.4.0"
 };
 
 export const Storage = {
@@ -51,7 +51,6 @@ export function setActiveNav(pathname){
 }
 
 export function requireSavedGuard(){
-  // used on week switching: if unsaved, warn user
   const ctrl = Storage.get("control", {saved:true});
   return !!ctrl.saved;
 }
@@ -71,4 +70,10 @@ export function markSaved(){
   ctrl.lastSave = new Date().toISOString();
   Storage.set("control", ctrl);
   window.dispatchEvent(new Event("control-changed"));
+}
+
+export function isoToWeekdayName(iso){
+  if(!iso) return "";
+  const [y,m,d] = iso.split("-").map(Number);
+  return new Date(y, m-1, d).toLocaleDateString("es-AR", { weekday:"long" });
 }

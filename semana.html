@@ -40,67 +40,57 @@
 
       <hr/>
 
-      <div class="grid cols-2">
-        <div>
-          <div class="small">Tipo de semana</div>
-          <select id="weekMode" style="width:100%">
-            <option value="normal">Normal</option>
-            <option value="viajante">Visita del viajante</option>
-            <option value="sin_reunion">Sin reunión</option>
-          </select>
-
-          <div class="small" style="margin-top:10px">Link WOL</div>
-          <input id="wolLink" style="width:100%" placeholder="https://wol.jw.org/..." />
-
-          <div class="small" style="margin-top:10px">Motivo si no hay reunión</div>
-          <input id="specialReason" style="width:100%" placeholder="Conmemoración, Asamblea..." />
-
-          <div class="small" style="margin-top:10px">Nombre del viajante</div>
-          <input id="travelerName" style="width:100%" placeholder="Roberto Armando" />
-
-          <div class="row" style="margin-top:10px">
-            <button id="btnLoadWOL">Cargar programa desde WOL</button>
-            <button id="btnSuggest" class="secondary">Sugerir asignados</button>
-            <button id="btnSave" class="success">Guardar semana</button>
-            <button id="btnToBoard" class="ghost">Ver tablero</button>
-          </div>
-          <div id="msg" class="notice" style="display:none; margin-top:10px"></div>
-          <div class="small" id="status" style="margin-top:10px">—</div>
-        </div>
-        <div class="notice warn">
-          <b>Reglas aplicadas:</b><br/>
-          - Tesoros, Perlas y Lectura bíblica quedan siempre como base fija.<br/>
-          - Seamos mejores maestros y Nuestra vida cristiana cambian según la guía semanal.<br/>
-          - En visita del viajante, el Estudio bíblico se reemplaza por el discurso de servicio.<br/>
-          - Si hay asamblea o Conmemoración entre semana, la reunión queda cancelada.
-        </div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:14px">
-      <h2>Formato de la reunión</h2>
       <div class="grid cols-3">
         <div>
-          <div class="small">Encabezado semanal</div>
-          <input id="weekLabel" style="width:100%" placeholder="2-8 DE MARZO" />
+          <div class="small">Día de reunión</div>
+          <input id="meetingDay" style="width:100%" placeholder="jueves / martes" />
         </div>
         <div>
-          <div class="small">Lectura bíblica</div>
-          <input id="bibleReading" style="width:100%" placeholder="ISAÍAS 41, 42" />
+          <div class="small">Hora</div>
+          <input id="meetingTime" type="time" style="width:100%" />
         </div>
         <div>
-          <div class="small">Canción inicial</div>
-          <input id="songOpening" style="width:100%" placeholder="Canción 8 y oración" />
-        </div>
-        <div>
-          <div class="small">Canción intermedia</div>
-          <input id="songMiddle" style="width:100%" placeholder="Canción 19" />
-        </div>
-        <div>
-          <div class="small">Canción final</div>
-          <input id="songClosing" style="width:100%" placeholder="Canción 110 y oración" />
+          <div class="small">Tipo de semana</div>
+          <select id="weekType" style="width:100%">
+            <option value="normal">Normal</option>
+            <option value="viajante">Visita del viajante</option>
+            <option value="asamblea">Asamblea</option>
+            <option value="conmemoracion">Conmemoración</option>
+            <option value="sin_reunion">Sin reunión por otro motivo</option>
+          </select>
         </div>
       </div>
+
+      <div class="grid cols-2" style="margin-top:12px">
+        <div>
+          <div class="small">Link WOL</div>
+          <input id="wolLink" style="width:100%" placeholder="https://wol.jw.org/..." />
+        </div>
+        <div>
+          <div class="small">Motivo / observación</div>
+          <input id="specialReason" style="width:100%" placeholder="Ej.: Asamblea regional / Conmemoración / corte de luz..." />
+        </div>
+      </div>
+
+      <div class="grid cols-2" style="margin-top:12px">
+        <div>
+          <div class="small">Nombre del viajante</div>
+          <input id="travelingSpeaker" style="width:100%" placeholder="Roberto Armando" />
+        </div>
+        <div>
+          <div class="small">Título del discurso del viajante</div>
+          <input id="travelingTalkTitle" style="width:100%" placeholder="Discurso de servicio del viajante" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <button id="btnLoadWOL">Cargar programa desde WOL</button>
+        <button id="btnSuggest" class="secondary">Sugerir asignados</button>
+        <button id="btnSave" class="success">Guardar semana</button>
+        <button id="btnToBoard" class="ghost">Ver tablero</button>
+      </div>
+      <div id="msg" class="notice" style="display:none; margin-top:10px"></div>
+      <div class="small" id="status" style="margin-top:10px">—</div>
     </div>
 
     <div class="grid cols-2" style="margin-top:14px">
@@ -113,10 +103,6 @@
         <div id="asgBox"></div>
       </div>
     </div>
-
-    <footer>
-      <div>Consejo: guardá la semana antes de pasar a otra. Si ves “No guardado”, no cambies de semana hasta guardar.</div>
-    </footer>
   </div>
 
   <script type="module" src="js/semana.js"></script>

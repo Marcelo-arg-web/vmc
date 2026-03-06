@@ -30,38 +30,29 @@
     <div class="grid cols-2">
       <div class="card">
         <h2>Firebase Config</h2>
-        <p>Pegá acá tu <span class="kbd">firebaseConfig</span> (JSON). Se guarda en tu navegador.</p>
+        <p>Pegá acá tu <span class="kbd">firebaseConfig</span> (JSON). Se guarda en tu navegador (localStorage).</p>
         <textarea id="cfg" spellcheck="false" placeholder='{"apiKey":"...","authDomain":"...","projectId":"..."}'></textarea>
-        <div class="small">Tip: Firebase Console → Project settings → Your apps → SDK setup and configuration.</div>
+        <div class="small">Tip: en Firebase Console → Project settings → Your apps → SDK setup and configuration.</div>
       </div>
 
       <div class="card">
-        <h2>Ajustes del programa</h2>
-        <div class="small">Nombre de congregación</div>
-        <input id="congregacion" placeholder='CONG.: "VILLA FIAD"' style="width:100%" />
+        <h2>Configuración VMC</h2>
+        <div class="small">Congregación</div>
+        <input id="congregacion" style="width:100%" placeholder='CONG.: "VILLA FIAD"' />
 
-        <div class="small" style="margin-top:10px">Nombre del viajante</div>
-        <input id="viajante" placeholder="Roberto Armando" style="width:100%" />
+        <div class="small" style="margin-top:10px">Viajante por defecto</div>
+        <input id="travelingName" style="width:100%" placeholder="Roberto Armando" />
 
-        <div class="small" style="margin-top:10px">Fechas sin reunión VMC (asamblea, Conmemoración, etc.)</div>
-        <textarea id="fechasEspeciales" placeholder="2026-04-02|Conmemoración
-2026-09-10|Asamblea"></textarea>
-        <div class="small">Una fecha por línea. Formato: <span class="kbd">AAAA-MM-DD|Motivo</span>.</div>
+        <div class="small" style="margin-top:10px">Horario sugerido</div>
+        <input id="defaultTime" type="time" style="width:100%" />
 
-        <hr/>
-        <div class="small">Proxy opcional para WOL</div>
+        <div class="small" style="margin-top:10px">Proxy (opcional)</div>
         <input id="proxy" placeholder="https://TU-WORKER.workers.dev/?url=" style="width:100%" />
-
-        <div class="row" style="margin-top:12px">
-          <button id="btnSaveCfg" class="success">Guardar configuración</button>
-          <div id="msg" class="small"></div>
-        </div>
+        <hr/>
+        <button id="btnSaveCfg" class="success">Guardar configuración</button>
+        <div id="msg" class="small" style="margin-top:8px"></div>
       </div>
     </div>
-
-    <footer>
-      <div>Consejo: guardá la semana antes de pasar a otra. Si ves “No guardado”, no cambies de semana hasta guardar.</div>
-    </footer>
   </div>
 
   <script type="module" src="js/settings.js"></script>

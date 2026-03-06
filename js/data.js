@@ -71,6 +71,10 @@ export async function loadAssignments(weekISO){
 
 export async function saveAssignments(weekISO, rows){
   await ensureInit();
+  const prev = await loadAssignments(weekISO);
+  for (const r of prev){
+    await deleteDoc(doc(db(), "asignaciones", r.id));
+  }
   for (const r of rows){
     const id = `${weekISO}__${String(r.key || r.type || 'parte').replace(/[^a-z0-9]+/gi,'_')}`.slice(0,120);
     await setDoc(doc(db(), "asignaciones", id), { ...r, weekISO, updatedAt:new Date().toISOString() }, { merge:true });
