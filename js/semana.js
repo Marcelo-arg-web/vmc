@@ -97,11 +97,12 @@ function applyAppDefaults(){
 }
 
 function maybeApplyNoMeetingDefaults(){
-  const noMeeting = (appSettings.noMeetingDates || "").split(/
-+/).map(x=>x.trim()).filter(Boolean);
+  const noMeeting = (appSettings.noMeetingDates || "")
+    .split(/\n+/)
+    .map(x=>x.trim())
+    .filter(Boolean);
   const row = noMeeting.find(x=>x.startsWith(`${weekInput.value} |`) || x === weekInput.value);
   if(row){
-
     const motive = row.split("|")[1]?.trim() || "Sin reunión";
     const low = motive.toLowerCase();
     fields.weekType.value = low.includes("conmemor") ? "conmemoracion" : low.includes("asamblea") ? "asamblea" : "sin_reunion";
@@ -229,8 +230,13 @@ function renderAssignments(historyByPerson=null){
     sel.value = row?.person1Id || "";
     sel.addEventListener("change", ()=>{
       const p = people.find(x=>x.id===sel.value);
-      row.person1Id = sel.value; row.person1Name = p?.name || "";
-      if(row.needsHelper){ row.person2Id = ""; row.person2Name = ""; renderAssignments(historyByPerson); }
+      row.person1Id = sel.value;
+      row.person1Name = p?.name || "";
+      if(row.needsHelper){
+        row.person2Id = "";
+        row.person2Name = "";
+        renderAssignments(historyByPerson);
+      }
       markUnsaved("Se editaron asignaciones.");
     });
   });
@@ -239,13 +245,17 @@ function renderAssignments(historyByPerson=null){
     sel.value = row?.person2Id || "";
     sel.addEventListener("change", ()=>{
       const p = people.find(x=>x.id===sel.value);
-      row.person2Id = sel.value; row.person2Name = p?.name || "";
+      row.person2Id = sel.value;
+      row.person2Name = p?.name || "";
       markUnsaved("Se editaron asignaciones.");
     });
   });
   qsa("[data-title]", asgBox).forEach(inp=>{
     const row = assignments.find(x=>x.key===inp.dataset.title);
-    inp.addEventListener("input", ()=>{ row.title = inp.value; markUnsaved("Se editó una parte."); });
+    inp.addEventListener("input", ()=>{
+      row.title = inp.value;
+      markUnsaved("Se editó una parte.");
+    });
   });
 }
 
@@ -275,12 +285,18 @@ function syncAssignmentsFromDOM(){
   qsa("[data-h1]", asgBox).forEach(sel=>{
     const row = assignments.find(x=>x.key===sel.dataset.h1);
     const p = people.find(x=>x.id===sel.value);
-    if(row){ row.person1Id = sel.value || ""; row.person1Name = p?.name || ""; }
+    if(row){
+      row.person1Id = sel.value || "";
+      row.person1Name = p?.name || "";
+    }
   });
   qsa("[data-h2]", asgBox).forEach(sel=>{
     const row = assignments.find(x=>x.key===sel.dataset.h2);
     const p = people.find(x=>x.id===sel.value);
-    if(row){ row.person2Id = sel.value || ""; row.person2Name = p?.name || ""; }
+    if(row){
+      row.person2Id = sel.value || "";
+      row.person2Name = p?.name || "";
+    }
   });
 }
 
@@ -301,10 +317,19 @@ async function suggest(){
       let best = null, bestScore = Infinity;
       for(const p of candidates){
         const sc = scoreCandidate({ person:p, historyByPerson:byPerson, currentWeekISO:currentWeek(), currentUsedIds:currentUsed, partType:row.type });
-        if(sc < bestScore){ best = p; bestScore = sc; }
+        if(sc < bestScore){
+          best = p;
+          bestScore = sc;
+        }
       }
-      if(best){ row.person1Id = best.id; row.person1Name = best.name; currentUsed.add(best.id); }
-    } else currentUsed.add(row.person1Id);
+      if(best){
+        row.person1Id = best.id;
+        row.person1Name = best.name;
+        currentUsed.add(best.id);
+      }
+    } else {
+      currentUsed.add(row.person1Id);
+    }
 
     if(row.needsHelper && !row.person2Id){
       const main = people.find(x=>x.id===row.person1Id);
@@ -312,9 +337,16 @@ async function suggest(){
       let best = null, bestScore = Infinity;
       for(const p of helperCandidates){
         const sc = scoreCandidate({ person:p, historyByPerson:byPerson, currentWeekISO:currentWeek(), currentUsedIds:currentUsed, partType:"Ayudante" });
-        if(sc < bestScore){ best = p; bestScore = sc; }
+        if(sc < bestScore){
+          best = p;
+          bestScore = sc;
+        }
       }
-      if(best){ row.person2Id = best.id; row.person2Name = best.name; currentUsed.add(best.id); }
+      if(best){
+        row.person2Id = best.id;
+        row.person2Name = best.name;
+        currentUsed.add(best.id);
+      }
     }
   }
   renderAssignments(byPerson);
