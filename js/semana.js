@@ -101,6 +101,7 @@ function maybeApplyNoMeetingDefaults(){
 +/).map(x=>x.trim()).filter(Boolean);
   const row = noMeeting.find(x=>x.startsWith(`${weekInput.value} |`) || x === weekInput.value);
   if(row){
+
     const motive = row.split("|")[1]?.trim() || "Sin reunión";
     const low = motive.toLowerCase();
     fields.weekType.value = low.includes("conmemor") ? "conmemoracion" : low.includes("asamblea") ? "asamblea" : "sin_reunion";
