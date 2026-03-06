@@ -383,7 +383,32 @@ qs("#btnLoadWOL").addEventListener("click", async ()=>{
 });
 
 qs("#btnSuggest").addEventListener("click", suggest);
-qs("#btnToBoard").addEventListener("click", ()=> location.href = "tablero.html");
+qs("#btnToBoard").addEventListener("click", async ()=>{
+  try{
+    syncAssignmentsFromDOM();
+    const weekISO = currentWeek();
+    Storage.set("currentWeekISO", weekISO);
+    const weekData = {
+      wolUrl: fields.wolLink.value.trim(),
+      meetingDay: fields.meetingDay.value.trim(),
+      meetingTime: fields.meetingTime.value.trim(),
+      weekType: fields.weekType.value,
+      specialReason: fields.specialReason.value.trim(),
+      reading: fields.reading.value.trim(),
+      openingSong: fields.openingSong.value.trim(),
+      middleSong: fields.middleSong.value.trim(),
+      closingSong: fields.closingSong.value.trim(),
+      travelerName: fields.travelerName.value.trim(),
+      travelerTalkTitle: fields.travelerTalkTitle.value.trim(),
+      parts: isNoMeeting() ? [] : parts
+    };
+    await saveWeek(weekISO, weekData);
+    await saveAssignments(weekISO, isNoMeeting() ? [] : assignments);
+    location.href = `tablero.html?week=${encodeURIComponent(weekISO)}`;
+  }catch(e){
+    show(`No se pudo preparar el tablero: ${e?.message || e}`, "err");
+  }
+});
 
 qs("#btnSave").addEventListener("click", async ()=>{
   syncAssignmentsFromDOM();
@@ -405,6 +430,7 @@ qs("#btnSave").addEventListener("click", async ()=>{
   await saveWeek(weekISO, weekData);
   await saveAssignments(weekISO, isNoMeeting() ? [] : assignments);
   if(!isNoMeeting()) await appendHistoryFromWeek(weekISO);
+  Storage.set("currentWeekISO", weekISO);
   show("Semana guardada.");
   showToast("Guardado con éxito");
 });

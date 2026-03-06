@@ -4,7 +4,9 @@ import { loadWeek, loadAssignments, loadAppSettings } from "./data.js";
 
 mountHeader();
 
-const currentWeek = Storage.get("currentWeekISO", "");
+const urlWeek = new URLSearchParams(location.search).get("week") || "";
+const currentWeek = urlWeek || Storage.get("currentWeekISO", "");
+if(currentWeek) Storage.set("currentWeekISO", currentWeek);
 const nextWeek = addDaysISO(currentWeek, 7);
 
 function byType(asg, type){ return asg.find(x=>x.type===type); }
@@ -27,6 +29,9 @@ function sectionTable(sectionClass, sectionTitle, rows, hint=""){
 
 function buildWeekSheet(weekISO, app, w, asg){
   if(!w) return `<div class="week-sheet"><div class="week-date">${fmtDateTitle(weekISO)}</div><div class="special-empty">No hay datos guardados para esta semana.</div></div>`;
+  if(!asg?.length && !["asamblea","conmemoracion","sin_reunion"].includes(w.weekType)){
+    return `<div class="week-sheet"><div class="week-date">${fmtDateTitle(weekISO)}</div><div class="special-empty">La semana está guardada, pero todavía no hay asignaciones guardadas para imprimir.</div></div>`;
+  }
   if(["asamblea","conmemoracion","sin_reunion"].includes(w.weekType)){
     return `<div class="week-sheet"><div class="week-date">${fmtDateTitle(weekISO)}</div><div class="special-empty">Esta semana no hay reunión. ${esc(w.specialReason || "Motivo especial")}</div></div>`;
   }
