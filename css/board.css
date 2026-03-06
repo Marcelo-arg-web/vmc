@@ -44,27 +44,31 @@
 .navlinks .btn-link:hover{background:#f8fafc}
 #btnExportImage,#btnPrint{min-width:150px}
 
-@page{size:A4 portrait; margin:6mm;}
+@page{size:A4 portrait; margin:4mm;}
 @media print{
-  body{zoom:0.94}
+  html,body{width:210mm; height:auto}
+  body{zoom:0.82}
   .container.page-wide{max-width:none; padding:0}
-  #board{padding:4mm 5mm; width:auto; min-height:auto}
-  .board-header{margin-bottom:2.2mm; padding-bottom:1.5mm; border-bottom-width:3px}
-  .board-header .cong{font-size:9.5pt}
-  .board-title{font-size:17pt}
-  .week-sheet{padding-bottom:2.2mm; margin-bottom:2.2mm; border-bottom:1px solid #cbd5e1}
-  .week-top{gap:10px; margin-bottom:2.2mm}
-  .week-date{font-size:13pt; margin-bottom:1.2mm}
-  .week-reading{font-size:9.8pt}
-  .side-grid{font-size:9.2pt; gap:6px 6px}
-  .side-grid .value{min-height:14px}
-  .section-band{margin:2mm 0 0; padding:4px 9px; font-size:9.2pt}
-  .section-hint{font-size:7.8pt; margin:2px 0 1px}
-  .program-table td{padding:3px 5px; font-size:8.4pt}
-  .cell-time{width:42px}
-  .cell-bullet{width:14px; font-size:11px}
+  #boardWrap{margin:0}
+  #board{padding:3mm 3.5mm; width:auto; min-height:auto}
+  .board-header{margin-bottom:1.6mm; padding-bottom:1mm; border-bottom-width:2px; gap:8px}
+  .board-header .cong{font-size:8.4pt}
+  .board-title{font-size:14.2pt; line-height:1.05}
+  .week-sheet{padding-bottom:1.5mm; margin-bottom:1.5mm; border-bottom:1px solid #cbd5e1; page-break-inside:avoid}
+  .week-top{gap:8px; margin-bottom:1.4mm}
+  .week-date{font-size:11.2pt; margin-bottom:.8mm}
+  .week-reading{font-size:8.6pt; letter-spacing:.1px}
+  .side-grid{font-size:8pt; gap:4px 5px}
+  .side-grid .value{min-height:12px}
+  .section-band{margin:1.2mm 0 0; padding:3px 7px; font-size:8.1pt}
+  .section-hint{font-size:7pt; margin:1px 0 0}
+  .program-table td{padding:2px 4px; font-size:7.3pt; line-height:1.15}
+  .cell-time{width:33px}
+  .cell-bullet{width:11px; font-size:9px}
   .cell-assign{width:31%}
-  .asg-pair{gap:5px; grid-template-columns:minmax(0,1fr) 14px minmax(0,1fr)}
-  .footer-line{font-size:8.6pt; margin-top:3px}
-  .special-empty{padding:8px; font-size:9pt}
+  .asg-solo,.asg-main,.asg-help{font-size:7.3pt}
+  .asg-pair{gap:4px; grid-template-columns:minmax(0,1fr) 11px minmax(0,1fr)}
+  .asg-num{font-size:7.2pt}
+  .footer-line{font-size:7.4pt; margin-top:2px}
+  .special-empty{padding:6px; font-size:8pt}
 }
