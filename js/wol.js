@@ -1,181 +1,236 @@
 import { markUnsaved } from "./app.js";
 
 export function buildFetchUrl(wolUrl, proxyBase){
-  const clean = (wolUrl||"").trim();
+  const clean = (wolUrl || "").trim();
   if(!clean) return null;
   if(proxyBase) return proxyBase + encodeURIComponent(clean);
-  return "https://r.jina.ai/http://" + clean.replace(/^https?:\/\//,"");
+  return "https://r.jina.ai/http://" + clean.replace(/^https?:\/\//, "");
 }
 
-function compact(s){ return (s||"").replace(/\s+/g, " ").trim(); }
-function norm(s){ return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
-function escRE(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+function compact(s){
+  return (s || "").replace(/\s+/g, " ").trim();
+}
 
-function cleanText(text){
-  return String(text || "")
+function normalizeForSearch(s){
+  return (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function cleanSourceText(raw){
+  return (raw || "")
     .replace(/\r/g, "")
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
     .replace(/\[([^\]]+)\]\((?:https?:\/\/)?[^)]+\)/g, "$1")
-    .replace(/[*_`>]+/g, "")
+    .replace(/\*\*/g, "")
+    .replace(/[`>*_]/g, "")
     .replace(/\u00a0/g, " ")
     .replace(/[ \t]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+    .replace(/\n{3,}/g, "\n\n");
 }
 
-function linesOf(text){
-  return cleanText(text)
+function splitLines(text){
+  return cleanSourceText(text)
     .split("\n")
-    .map(compact)
-    .filter(Boolean)
-    .filter(line => !/^Respuesta$/i.test(line))
-    .filter(line => !/^Image:/i.test(line));
+    .map(line => compact(line))
+    .filter(Boolean);
 }
 
-function parseReading(lines){
-  for(let i=0;i<lines.length;i++){
-    if(/lectura semanal de la biblia/i.test(lines[i])){
-      const same = compact(lines[i].replace(/.*lectura semanal de la biblia\s*[|:]?\s*/i, ""));
-      if(same) return same;
-      for(let j=i+1;j<Math.min(i+4, lines.length);j++){
-        if(/^[#\d]/.test(lines[j])) continue;
-        if(/canci[oó]n/i.test(lines[j])) continue;
-        return lines[j];
-      }
-    }
-  }
-  const direct = lines.find(line => /^(?:#+\s*)?[1-3]?\s?[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+\d+(?:,\s*\d+)?$/.test(line));
-  return direct ? direct.replace(/^#+\s*/, "") : "";
+function parseHeadingNumber(line){
+  const m = line.match(/^#+\s*(\d+)\.\s+(.+)$/);
+  if(m) return { num: Number(m[1]), title: compact(m[2]) };
+  const m2 = line.match(/^(\d+)\.\s+(.+)$/);
+  if(m2) return { num: Number(m2[1]), title: compact(m2[2]) };
+  return null;
 }
 
-function parseSongs(lines){
-  const nums = [];
-  for(const line of lines){
-    const matches = [...line.matchAll(/canci[oó]n\s+(\d+)/ig)];
-    for(const m of matches) nums.push(m[1]);
-  }
-  return {
-    openingSong: nums[0] || "",
-    middleSong: nums[1] || "",
-    closingSong: nums.at(-1) || ""
-  };
-}
-
-function findIndex(lines, pattern, from=0){
-  return lines.findIndex((line, idx) => idx >= from && pattern.test(norm(line)));
-}
-
-function parseMinutes(line){
-  const m = line.match(/\((\d+)\s*min/i);
+function parseMinutes(text){
+  const m = (text || "").match(/\((\d+)\s*min/i);
   return m ? Number(m[1]) : "";
 }
 
-function parseStudyDetail(lines, index){
-  const out = [];
-  for(let i=index+1;i<Math.min(index+4, lines.length);i++){
-    const line = lines[i];
-    if(/^###?\s*\d+[.)]?\s+/.test(line)) break;
-    if(/^###?\s*palabras de conclusi[oó]n/i.test(line)) break;
-    if(/^##\s+/.test(line)) break;
-    if(/^(repaso de esta reunion|palabras de conclusion|canci[oó]n)/i.test(norm(line))) break;
-    if(/^\(\d+\s*min/i.test(line)) continue;
-    out.push(line);
+function takeFirstMatch(lines, regex){
+  for(const line of lines){
+    const m = line.match(regex);
+    if(m) return m;
   }
-  return compact(out.join(" "));
+  return null;
 }
 
-function parseProgram(lines){
-  const parts = [];
+function parseReading(lines){
+  const explicit = takeFirstMatch(lines, /lectura semanal de la biblia\s*[:| -]*\s*(.+)$/i);
+  if(explicit) return compact(explicit[1]);
+  const line = lines.find(l => /^##\s+/.test(l) && !/^(##\s+tesoros|##\s+seamos|##\s+nuestra)/i.test(l));
+  if(line){
+    return compact(line.replace(/^##\s+/, ""));
+  }
+  return "";
+}
 
-  const treasuresStart = findIndex(lines, /tesoros de la biblia/);
-  const teachersStart = findIndex(lines, /seamos mejores maestros/);
-  const christianStart = findIndex(lines, /nuestra vida cristiana/);
+function parseSongs(lines){
+  let openingSong = "";
+  let middleSong = "";
+  let closingSong = "";
 
-  let treasureTitle = "Tesoros de la Biblia";
-  let treasureMinutes = 10;
-  let readingPassage = "";
-  let readingMinutes = 4;
+  const opening = lines.find(l => /canci[oó]n\s+\d+\s+y\s+oraci[oó]n/i.test(l));
+  const closing = [...lines].reverse().find(l => /canci[oó]n\s+\d+\s+y\s+oraci[oó]n/i.test(l));
+  const middle = lines.find(l => /^#+\s*canci[oó]n\s+\d+$/i.test(l));
 
-  for(let i=treasuresStart+1; i<(teachersStart === -1 ? lines.length : teachersStart); i++){
-    const line = lines[i];
-    let m = line.match(/^###?\s*1\.\s+(.+)$/i);
+  if(opening){
+    const m = opening.match(/canci[oó]n\s+(\d+)/i);
+    if(m) openingSong = m[1];
+  }
+  if(closing){
+    const m = closing.match(/canci[oó]n\s+(\d+)/i);
+    if(m) closingSong = m[1];
+  }
+  if(middle){
+    const m = middle.match(/canci[oó]n\s+(\d+)/i);
+    if(m) middleSong = m[1];
+  }
+
+  return { openingSong, middleSong, closingSong };
+}
+
+function parseBibleReadingDetail(lines){
+  const idx = lines.findIndex(l => /lectura de la biblia/i.test(l));
+  if(idx === -1) return "";
+  for(let i = idx + 1; i < Math.min(lines.length, idx + 4); i++){
+    const m = lines[i].match(/^\((\d+)\s*mins?\.?(?:\))?\s*(.+)$/i);
     if(m){
-      treasureTitle = compact(m[1]);
-      treasureMinutes = parseMinutes(lines[i+1]) || 10;
+      const after = compact(m[2].replace(/\([^)]*\)\.?$/g, ""));
+      if(after) return after;
+    }
+    const m2 = lines[i].match(/^(.+?)\s*\((?:th|lmd)\b/i);
+    if(m2) return compact(m2[1]);
+  }
+  return "";
+}
+
+function parseStudyDetail(lines){
+  const idx = lines.findIndex(l => /estudio b[ií]blico de la congregaci[oó]n/i.test(l));
+  if(idx === -1) return "";
+  for(let i = idx + 1; i < Math.min(lines.length, idx + 4); i++){
+    if(/^\(/.test(lines[i])){
+      const m = lines[i].match(/^\((\d+)\s*mins?\.?(?:\))?\s*(.+)$/i);
+      if(m) return compact(m[2]);
+    }
+  }
+  return "";
+}
+
+function parseStructuredParts(lines){
+  const items = [];
+  let currentSection = "";
+
+  for(let i = 0; i < lines.length; i++){
+    const line = lines[i];
+    const n = normalizeForSearch(line);
+
+    if(/##\s+tesoros de la biblia/i.test(line)){
+      currentSection = "Tesoros de la Biblia";
       continue;
     }
-    m = line.match(/^###?\s*3\.\s+Lectura de la Biblia$/i);
-    if(m){
-      const next = lines[i+1] || "";
-      readingMinutes = parseMinutes(next) || 4;
-      const pm = next.match(/\)\s*([^()]+?)(?:\s*\(|$)/);
-      if(pm) readingPassage = compact(pm[1].replace(/[.;]$/, ""));
+    if(/##\s+seamos mejores maestros/i.test(line)){
+      currentSection = "Seamos mejores maestros";
+      continue;
     }
-  }
+    if(/##\s+nuestra vida cristiana/i.test(line)){
+      currentSection = "Nuestra vida cristiana";
+      continue;
+    }
 
-  parts.push({ section:"Tesoros de la Biblia", type:"Tesoros", title:treasureTitle, minutes:treasureMinutes });
-  parts.push({ section:"Tesoros de la Biblia", type:"Perlas", title:"Busquemos perlas escondidas", minutes:10 });
-  parts.push({ section:"Tesoros de la Biblia", type:"Lectura de la Biblia", title:"Lectura de la Biblia", minutes:readingMinutes, detail: readingPassage });
+    const heading = parseHeadingNumber(line);
+    if(!heading) continue;
 
-  for(let i=teachersStart+1; i<(christianStart === -1 ? lines.length : christianStart); i++){
-    const line = lines[i];
-    const m = line.match(/^###?\s*(\d+)\.\s+(.+)$/i);
-    if(!m) continue;
-    const title = compact(m[2]);
-    const detailLine = lines[i+1] || "";
-    const minutes = parseMinutes(detailLine) || "";
-    let detail = compact(detailLine.replace(/^\((\d+)\s*mins?\.?(?:\)|\))?\s*/i, ""));
-    const lessonIdx = detail.search(/\(.*lecci[oó]n/i);
-    if(lessonIdx > 0) detail = compact(detail.slice(0, lessonIdx));
-    const n = norm(title);
-    parts.push({
-      section:"Seamos mejores maestros",
-      type:(n.includes("discurso") ? "Discurso de estudiante" : "Asignación estudiantil"),
-      title,
+    const detailLines = [];
+    for(let j = i + 1; j < lines.length; j++){
+      const next = lines[j];
+      if(/^##\s+/.test(next) || parseHeadingNumber(next) || /^#+\s*canci[oó]n\s+\d+/i.test(next) || /palabras de conclusi[oó]n/i.test(next)) break;
+      detailLines.push(next);
+    }
+
+    const minutes = parseMinutes(detailLines[0] || "") || parseMinutes(heading.title) || "";
+    const detailText = compact(detailLines.join(" "));
+    items.push({
+      section: currentSection,
+      num: heading.num,
+      title: heading.title,
       minutes,
-      detail,
-      needsHelper: !n.includes("discurso")
+      detailText
     });
   }
+  return items;
+}
 
-  for(let i=christianStart+1; i<lines.length; i++){
-    const line = lines[i];
-    if(/palabras de conclusion|palabras de conclusión/i.test(norm(line))) break;
-    const m = line.match(/^###?\s*(\d+)\.\s+(.+)$/i);
-    if(!m) continue;
-    const title = compact(m[2]);
-    const n = norm(title);
-    const next = lines[i+1] || "";
-    const minutes = parseMinutes(next) || "";
-    if(n.includes("estudio biblico de la congregacion")){
-      let detail = compact(next.replace(/^\((\d+)\s*mins?\.?(?:\)|\))?\s*/i, ""));
-      if(!detail) detail = parseStudyDetail(lines, i);
-      parts.push({ section:"Nuestra vida cristiana", type:"Conductor EBC", title:"Estudio bíblico de la congregación", minutes: minutes || 30, detail });
-      parts.push({ section:"Nuestra vida cristiana", type:"Lector EBC", title:"Estudio bíblico de la congregación", minutes: minutes || 30, detail });
-    } else {
+function buildPartsFromItems(lines, items){
+  const parts = [];
+  const readingRange = parseBibleReadingDetail(lines);
+  const studyDetail = parseStudyDetail(lines);
+
+  for(const item of items){
+    const titleNorm = normalizeForSearch(item.title);
+
+    if(item.section === "Tesoros de la Biblia"){
+      if(item.num === 1){
+        parts.push({ section:item.section, type:"Tesoros", title:item.title, minutes:item.minutes || 10, detail:item.detailText });
+      } else if(item.num === 2){
+        parts.push({ section:item.section, type:"Perlas", title:"Busquemos perlas escondidas", minutes:item.minutes || 10 });
+      } else if(item.num === 3){
+        parts.push({ section:item.section, type:"Lectura de la Biblia", title:"Lectura de la Biblia", minutes:item.minutes || 4, detail: readingRange });
+      }
+      continue;
+    }
+
+    if(item.section === "Seamos mejores maestros"){
       parts.push({
-        section:"Nuestra vida cristiana",
-        type: n.includes("necesidades de la congregacion") ? "Necesidades de la congregación" : "Nuestra vida cristiana",
-        title,
-        minutes,
-        detail: ""
+        section:item.section,
+        type:/discurso/i.test(titleNorm) ? "Discurso de estudiante" : "Asignación estudiantil",
+        title:item.title,
+        minutes:item.minutes || "",
+        detail:item.detailText,
+        needsHelper: !/discurso/i.test(titleNorm)
       });
+      continue;
+    }
+
+    if(item.section === "Nuestra vida cristiana"){
+      if(/estudio b[ií]blico de la congregaci[oó]n/i.test(titleNorm)){
+        const ebcTitle = studyDetail ? `Estudio bíblico de la congregación — ${studyDetail}` : "Estudio bíblico de la congregación";
+        parts.push({ section:item.section, type:"Conductor EBC", title: ebcTitle, minutes:item.minutes || 30, detail: studyDetail });
+        parts.push({ section:item.section, type:"Lector EBC", title: ebcTitle, minutes:item.minutes || 30, detail: studyDetail });
+      } else if(!/cancion/i.test(titleNorm) && !/palabras de conclusion/i.test(titleNorm)){
+        parts.push({
+          section:item.section,
+          type:/necesidades de la congregacion/i.test(titleNorm) ? "Necesidades de la congregación" : "Nuestra vida cristiana",
+          title:item.title,
+          minutes:item.minutes || "",
+          detail:item.detailText
+        });
+      }
     }
   }
 
   return parts;
 }
 
-export async function fetchAndParseWOL({ wolUrl, proxyBase=null }){
+export async function fetchAndParseWOL({ wolUrl, proxyBase = null }){
   const url = buildFetchUrl(wolUrl, proxyBase);
   if(!url) throw new Error("Pegá un link de WOL.");
+
   const res = await fetch(url);
   if(!res.ok) throw new Error("No se pudo leer WOL.");
   const raw = await res.text();
-  const lines = linesOf(raw);
+  const lines = splitLines(raw);
   const reading = parseReading(lines);
   const songs = parseSongs(lines);
-  const parts = parseProgram(lines);
+  const items = parseStructuredParts(lines);
+  const parts = buildPartsFromItems(lines, items);
+
+  if(!parts.length) throw new Error("No se detectaron asignaciones en WOL.");
 
   markUnsaved("Se cargó el programa desde WOL.");
   return {
@@ -185,8 +240,8 @@ export async function fetchAndParseWOL({ wolUrl, proxyBase=null }){
       openingSong: songs.openingSong,
       middleSong: songs.middleSong,
       closingSong: songs.closingSong,
-      ebcTitle: "Estudio bíblico de la congregación"
+      ebcTitle: (parts.find(p => p.type === "Conductor EBC") || {}).detail || ""
     },
-    rawTextSample: lines.slice(0, 160).join("\n")
+    rawTextSample: lines.slice(0, 120).join("\n")
   };
 }

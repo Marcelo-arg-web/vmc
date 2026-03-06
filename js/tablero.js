@@ -49,7 +49,6 @@ function buildWeekSheet(weekISO, app, w, asg){
     <div class="asg-row single"><div><span class="asg-name">${esc(lec?.person1Name || '—')}</span> <span class="asg-num">3</span></div></div>`;
 
   const vidaRows = vida.map(r=>`<div class="asg-name">${esc(r.person1Name || '—')}</div>`).join("");
-  const lecturaTexto = lec?.detail ? `${esc(lec.title || 'Lectura de la Biblia')} — ${esc(lec.detail)}` : esc(lec?.title || 'Lectura de la Biblia');
   const ebcLabel = conductor || lector ? `<div class="footer-line"><div>Conductor/Lector: <b>${esc(conductor?.person1Name || '—')}</b> / ${esc(lector?.person1Name || '—')}</div><div class="right">Oración: ${esc(or2)}</div></div>` : `<div class="footer-line"><div></div><div class="right">Oración: ${esc(or2)}</div></div>`;
 
   return `
@@ -76,19 +75,19 @@ function buildWeekSheet(weekISO, app, w, asg){
         <div class="lines">
           <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(tes?.title || '—')}${tes?.minutes ? ` (${tes.minutes} mins.)` : ''}</div></div>
           <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">Busquemos perlas escondidas${per?.minutes ? ` (${per.minutes} mins.)` : ''}</div></div>
-          <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${lecturaTexto}${lec?.minutes ? ` (${lec.minutes} mins.)` : ''}</div></div>
+          <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(lec?.title || 'Lectura de la Biblia')}${lec?.minutes ? ` (${lec.minutes} mins.)` : ''}</div></div>
         </div>
 
         <div class="section-band maestros">SEAMOS MEJORES MAESTROS</div>
         <div class="lines">
-          ${students.map(r=>`<div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(r.title || r.type)}${r.detail ? ` — ${esc(r.detail)}` : ''}${r.minutes ? ` (${r.minutes} mins.)` : ''}</div></div>`).join('')}
+          ${students.map(r=>`<div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(r.title || r.type)}${r.minutes ? ` (${r.minutes} mins.)` : ''}</div></div>`).join('')}
         </div>
 
         <div class="section-band vida">NUESTRA VIDA CRISTIANA</div>
         <div class="lines">
           <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">Canción ${esc(w.middleSong || '—')}</div></div>
-          ${vida.map(r=>`<div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(r.title || r.type)}${r.detail ? ` — ${esc(r.detail)}` : ''}${r.minutes ? ` (${r.minutes} mins.)` : ''}</div></div>`).join('')}
-          ${conductor ? `<div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(conductor.title || 'Estudio bíblico de la congregación')}${conductor.detail ? ` — ${esc(conductor.detail)}` : ''} (${esc(conductor.minutes || 30)} mins.)</div></div>` : ''}
+          ${vida.map(r=>`<div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(r.title || r.type)}${r.minutes ? ` (${r.minutes} mins.)` : ''}</div></div>`).join('')}
+          ${conductor ? `<div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">${esc(conductor.title || 'Estudio bíblico de la congregación')} (${esc(conductor.minutes || 30)} mins.)</div></div>` : ''}
           <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">Repaso de esta reunión, adelanto de la próxima y anuncios (3 mins.)</div></div>
           <div class="line"><div class="time"></div><div class="dot">•</div><div class="topic">Canción ${esc(w.closingSong || '—')}</div></div>
         </div>
