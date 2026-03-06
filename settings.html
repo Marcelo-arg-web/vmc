@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Configuración — Planificador VMC</title>
   <link rel="stylesheet" href="css/styles.css" />
-  
 </head>
 <body>
   <div class="topbar">
@@ -28,26 +27,37 @@
   </div>
 
   <div class="container">
-    
-<div class="grid cols-2">
-  <div class="card">
-    <h2>Firebase Config</h2>
-    <p>Pegá acá tu <span class="kbd">firebaseConfig</span> (JSON). Se guarda en tu navegador (localStorage).</p>
-    <textarea id="cfg" spellcheck="false" placeholder='{"apiKey":"...","authDomain":"...","projectId":"..."}'></textarea>
-    <div class="small">Tip: en Firebase Console → Project settings → Your apps → SDK setup and configuration.</div>
-  </div>
+    <div class="grid cols-2">
+      <div class="card">
+        <h2>Firebase Config</h2>
+        <p>Pegá acá tu <span class="kbd">firebaseConfig</span> (JSON). Se guarda en tu navegador.</p>
+        <textarea id="cfg" spellcheck="false" placeholder='{"apiKey":"...","authDomain":"...","projectId":"..."}'></textarea>
+        <div class="small">Tip: Firebase Console → Project settings → Your apps → SDK setup and configuration.</div>
+      </div>
 
-  <div class="card">
-    <h2>Proxy (opcional)</h2>
-    <p>Si un día falla el mirror, podés usar un Proxy propio (por ejemplo Cloudflare Worker).</p>
-    <div class="small">Formato:</div>
-    <div class="notice"><span class="kbd">https://TU-WORKER.workers.dev/?url=</span></div>
-    <input id="proxy" placeholder="(opcional) pega tu proxy base" style="width:100%" />
-    <hr/>
-    <button id="btnSaveCfg" class="success">Guardar configuración</button>
-    <div id="msg" class="small" style="margin-top:8px"></div>
-  </div>
-</div>
+      <div class="card">
+        <h2>Ajustes del programa</h2>
+        <div class="small">Nombre de congregación</div>
+        <input id="congregacion" placeholder='CONG.: "VILLA FIAD"' style="width:100%" />
+
+        <div class="small" style="margin-top:10px">Nombre del viajante</div>
+        <input id="viajante" placeholder="Roberto Armando" style="width:100%" />
+
+        <div class="small" style="margin-top:10px">Fechas sin reunión VMC (asamblea, Conmemoración, etc.)</div>
+        <textarea id="fechasEspeciales" placeholder="2026-04-02|Conmemoración
+2026-09-10|Asamblea"></textarea>
+        <div class="small">Una fecha por línea. Formato: <span class="kbd">AAAA-MM-DD|Motivo</span>.</div>
+
+        <hr/>
+        <div class="small">Proxy opcional para WOL</div>
+        <input id="proxy" placeholder="https://TU-WORKER.workers.dev/?url=" style="width:100%" />
+
+        <div class="row" style="margin-top:12px">
+          <button id="btnSaveCfg" class="success">Guardar configuración</button>
+          <div id="msg" class="small"></div>
+        </div>
+      </div>
+    </div>
 
     <footer>
       <div>Consejo: guardá la semana antes de pasar a otra. Si ves “No guardado”, no cambies de semana hasta guardar.</div>
