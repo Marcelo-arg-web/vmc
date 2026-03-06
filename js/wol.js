@@ -49,10 +49,10 @@ export function buildFetchCandidates(wolUrl, proxyBase) {
   const out = [];
   const add = (u) => { if (u && !out.includes(u)) out.push(u); };
   if (proxyBase) add(proxyBase + encoded);
-  add(clean);
   add(`https://api.allorigins.win/raw?url=${encoded}`);
   add(`https://api.allorigins.win/get?url=${encoded}`);
   add(`https://r.jina.ai/http://${noProto}`);
+  add(clean);
   return out;
 }
 
@@ -303,17 +303,17 @@ export async function fetchAndParseWOL({ wolUrl, proxyBase = null }) {
   const candidates = buildFetchCandidates(wolUrl, proxyBase);
   if (!candidates.length) throw new Error("Pegá un link de WOL.");
 
-  let raw = "";
-  let lastErr = null;
+  const errors = [];
 
   for (const candidate of candidates) {
     try {
-      const res = await fetch(candidate);
+      const res = await fetch(candidate, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const contentType = res.headers.get("content-type") || "";
       const body = await res.text();
       if (!body) throw new Error("Respuesta vacía");
 
+      let raw = "";
       if (contentType.includes("application/json") || /^\s*\{/.test(body)) {
         try {
           const parsed = JSON.parse(body);
@@ -325,36 +325,39 @@ export async function fetchAndParseWOL({ wolUrl, proxyBase = null }) {
         raw = body;
       }
 
-      if (raw) break;
+      if (!raw) throw new Error("Respuesta vacía");
+
+      const text = /<html/i.test(raw) ? textFromHTML(raw) : cleanText(raw);
+      const lines = getLines(text);
+      const reading = parseReading(lines);
+      const songs = parseSongs(lines);
+      const tesoros = parseTesoros(lines, reading);
+      const student = parseStudentParts(lines);
+      const vida = parseVidaCristiana(lines);
+      const parts = [...tesoros, ...student, ...vida.parts];
+
+      if (!parts.length) {
+        throw new Error("La respuesta no contiene el programa de la reunión");
+      }
+
+      markUnsaved("Se cargó el programa desde WOL.");
+      return {
+        parts,
+        meta: {
+          reading,
+          openingSong: songs.openingSong,
+          middleSong: songs.middleSong,
+          closingSong: songs.closingSong,
+          ebcTitle: vida.ebcTitle,
+        },
+        rawTextSample: lines.slice(0, 120).join("
+"),
+        sourceUrl: candidate,
+      };
     } catch (err) {
-      lastErr = err;
+      errors.push(`${candidate} -> ${err?.message || "error desconocido"}`);
     }
   }
 
-  if (!raw) throw new Error(lastErr?.message || "No se pudo leer WOL.");
-
-  const text = /<html/i.test(raw) ? textFromHTML(raw) : cleanText(raw);
-  const lines = getLines(text);
-
-  const reading = parseReading(lines);
-  const songs = parseSongs(lines);
-  const tesoros = parseTesoros(lines, reading);
-  const student = parseStudentParts(lines);
-  const vida = parseVidaCristiana(lines);
-
-  const parts = [...tesoros, ...student, ...vida.parts];
-  if (!parts.length) throw new Error("No se detectaron asignaciones en la página.");
-
-  markUnsaved("Se cargó el programa desde WOL.");
-  return {
-    parts,
-    meta: {
-      reading,
-      openingSong: songs.openingSong,
-      middleSong: songs.middleSong,
-      closingSong: songs.closingSong,
-      ebcTitle: vida.ebcTitle,
-    },
-    rawTextSample: lines.slice(0, 120).join("\n"),
-  };
+  throw new Error(errors[0] || "No se pudo leer WOL.");
 }
