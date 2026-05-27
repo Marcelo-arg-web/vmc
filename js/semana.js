@@ -1,10 +1,11 @@
 import { qs, qsa, Storage, todayISO, fmtDateAR, fmtDayChip, dayNameFromISO, monthWeekOptions, addDaysISO, markUnsaved, requireSavedGuard } from "./app.js";
-import { mountHeader } from "./ui_common.js";
-import { fetchAndParseWOL, predictWOLUrlFromWeekISO } from "./wol.js";
-import { loadPeople, loadWeek, saveWeek, loadAssignments, saveAssignments, appendHistoryFromWeek, loadRecentHistory, loadAppSettings } from "./data.js";
+import { mountHeader, requireAuthOrRedirect } from "./ui_common.js";
+import { fetchAndParseWOL, predictWOLInfoFromWeekISO, predictWOLUrlFromWeekISO } from "./wol.js";
+import { loadPeople, loadWeek, saveWeek, loadAssignments, saveAssignments, clearAssignmentsForWeek, appendHistoryFromWeek, loadRecentHistory, loadAppSettings } from "./data.js";
 import { Rules, scoreCandidate } from "./rules.js";
 
 mountHeader();
+await requireAuthOrRedirect();
 
 const weekInput = qs("#weekISO");
 const weekChips = qs("#weekChips");
@@ -18,11 +19,103 @@ const asgBox = qs("#asgBox");
 const msg = qs("#msg");
 const btnAutoWOL = qs("#btnAutoWOL");
 const wolAutoHint = qs("#wolAutoHint");
+const auxRoomEnabledField = qs("#auxRoomEnabled");
+const auxRoomAutoStatus = qs("#auxRoomAutoStatus");
 
 let people = [];
 let parts = [];
 let assignments = [];
 let appSettings = {};
+
+function usesAuxRoom(){
+  // La Sala B ahora se decide por semana. Si la semana todavía no tiene valor,
+  // se conserva el comportamiento anterior tomando la configuración general.
+  if(auxRoomEnabledField) return auxRoomEnabledField.checked === true;
+  return appSettings.enableAuxRoom !== false;
+}
+
+function auxRoomName(){
+  return String(appSettings.auxRoomName || "Sala B").trim() || "Sala B";
+}
+
+function textKeyForAuxDetect(s){
+  return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function isStudentDiscoursePartForAux(part){
+  const section = textKeyForAuxDetect(part?.section);
+  if(!section.includes("seamos mejores maestros")) return false;
+
+  // La Sala B se activa solo por una parte titulada “Discurso” dentro de
+  // “Seamos mejores maestros”. No se toma en cuenta el detalle ni otros
+  // discursos, por ejemplo el discurso del viajante en “Nuestra vida cristiana”.
+  const type = textKeyForAuxDetect(part?.type);
+  const title = textKeyForAuxDetect(part?.title);
+  return type === "discurso de estudiante" || /^discurso(\b|$)/.test(title);
+}
+
+function hasStudentDiscourseForAux(partsList=parts){
+  return (Array.isArray(partsList) ? partsList : []).some(isStudentDiscoursePartForAux);
+}
+
+function setAuxRoomForWeek(enabled, { auto=false, manual=false, reason="" }={}){
+  if(auxRoomEnabledField){
+    auxRoomEnabledField.checked = !!enabled;
+    auxRoomEnabledField.dataset.auto = auto ? "1" : "0";
+    auxRoomEnabledField.dataset.manual = manual ? "1" : "0";
+  }
+  updateAuxRoomAutoStatus(reason);
+}
+
+function updateAuxRoomAutoStatus(reason=""){
+  if(!auxRoomAutoStatus) return;
+  const enabled = usesAuxRoom();
+  const auto = auxRoomEnabledField?.dataset.auto === "1";
+  const label = auxRoomName();
+  const base = enabled
+    ? `${label} activa para esta semana.`
+    : `${label} desactivada para esta semana.`;
+  const detail = reason || (auto
+    ? "Decidido automáticamente por WOL. Podés cambiarlo manualmente antes de guardar."
+    : "Control manual disponible para esta semana.");
+  auxRoomAutoStatus.className = "notice " + (enabled ? "ok" : "warn");
+  const labelEl = auxRoomAutoStatus.querySelector("span");
+  const helpEl = auxRoomAutoStatus.querySelector(".small");
+  if(labelEl) labelEl.textContent = `Usar ${label} / sala auxiliar esta semana · ${base}`;
+  if(helpEl) helpEl.textContent = detail;
+}
+
+function mainRoomName(){ return "Auditorio principal"; }
+function isAuxEligibleType(type){ return ["Lectura de la Biblia", "Asignación estudiantil", "Discurso de estudiante"].includes(type); }
+function isAuxAssignment(row){ return row?.isAuxRoom === true || String(row?.key || "").endsWith("_sala_b"); }
+
+function makeAssignmentRow({order, key, part, room="", isAuxRoom=false}){
+  return {
+    order,
+    key,
+    type: part.type,
+    title: part.title,
+    section: part.section,
+    minutes: part.minutes || "",
+    needsHelper: !!part.needsHelper,
+    detail: part.detail || "",
+    number: part.number || "",
+    room,
+    isAuxRoom,
+    person1Id:"", person1Name:"", person2Id:"", person2Name:""
+  };
+}
+
+function normalizeAssignmentsForCurrentSettings(rows){
+  if(isNoMeeting()) return [];
+  const defaults = buildDefaultAssignments();
+  if(!rows?.length) return defaults;
+  const byKey = new Map(rows.map(r=>[r.key, r]));
+  return defaults.map(def=>{
+    const old = byKey.get(def.key);
+    return old ? { ...def, ...old, room:def.room, isAuxRoom:def.isAuxRoom, order:def.order, needsHelper:def.needsHelper } : def;
+  });
+}
 
 function makeBaseParts(){
   return [
@@ -49,9 +142,9 @@ function isTravelerVisit(){ return fields.weekType.value === "visita"; }
 function setWeekPretty(){ qs("#weekPretty").textContent = fmtDateAR(weekInput.value); }
 
 function refreshAutoWOLHint(){
-  const predicted = predictWOLUrlFromWeekISO(weekInput.value);
-  if(predicted){
-    wolAutoHint.textContent = `Sugerido automáticamente desde marzo de 2026: ${predicted}`;
+  const info = predictWOLInfoFromWeekISO(weekInput.value);
+  if(info?.url){
+    wolAutoHint.textContent = `Sugerido automáticamente según patrón WOL 2026 (${info.issue}): ${info.url}`;
   } else {
     wolAutoHint.textContent = "Elegí una semana desde marzo de 2026 para autocompletar el enlace.";
   }
@@ -80,7 +173,112 @@ function showToast(text){
   el.textContent = text;
   el.classList.add("show");
   clearTimeout(showToast._t);
-  showToast._t = setTimeout(()=> el.classList.remove("show"), 2000);
+  showToast._t = setTimeout(()=> el.classList.remove("show"), 2600);
+}
+
+function countAssignedRows(rows=assignments){
+  return rows.reduce((n, r)=> n + (r.person1Id || r.person1Name ? 1 : 0) + (r.person2Id || r.person2Name ? 1 : 0), 0);
+}
+
+function currentAssignedSlots(rows=assignments){
+  const slots = [];
+  for(const row of rows || []){
+    if(row.person1Id){
+      slots.push({
+        personId:row.person1Id,
+        personName:row.person1Name || people.find(p=>p.id===row.person1Id)?.name || "Asignado",
+        assignment: row.title || row.type || "Asignación",
+        role: "principal",
+        room: row.room || ""
+      });
+    }
+    if(row.person2Id){
+      slots.push({
+        personId:row.person2Id,
+        personName:row.person2Name || people.find(p=>p.id===row.person2Id)?.name || "Ayudante",
+        assignment: row.title || row.type || "Asignación",
+        role: "ayudante",
+        room: row.room || ""
+      });
+    }
+  }
+  return slots;
+}
+
+function duplicateAssignmentGroups(rows=assignments){
+  const byId = new Map();
+  for(const slot of currentAssignedSlots(rows)){
+    if(!byId.has(slot.personId)) byId.set(slot.personId, []);
+    byId.get(slot.personId).push(slot);
+  }
+  return Array.from(byId.entries())
+    .filter(([, slots])=>slots.length > 1)
+    .map(([personId, slots])=>({ personId, personName:slots[0]?.personName || "Asignado", slots }));
+}
+
+function duplicateWarningText(groups=duplicateAssignmentGroups()){
+  if(!groups.length) return "";
+  const lines = groups.map(g=>{
+    const where = g.slots.map(s=>`${s.assignment}${s.room ? ` (${s.room})` : ""}`).join(" / " );
+    return `• ${g.personName}: ${where}`;
+  });
+  return `Atención: hay una persona repetida en más de una asignación.\n${lines.join("\n")}`;
+}
+
+function warnDuplicateAssignments({ popup=false, saveStatus=false }={}){
+  const groups = duplicateAssignmentGroups();
+  if(!groups.length) return false;
+  const text = duplicateWarningText(groups);
+  show(text.replace(/\n/g, "  "), "warn");
+  if(saveStatus) setSaveStatus(text.replace(/\n/g, "  "), false);
+  if(popup) alert(`${text}\n\nLa app permite esta repetición manual, pero conviene revisar si hay otra persona disponible.`);
+  return true;
+}
+
+function confirmDuplicateAssignmentsBeforeSave(){
+  const groups = duplicateAssignmentGroups();
+  if(!groups.length) return true;
+  const text = duplicateWarningText(groups);
+  return confirm(`${text}\n\nSe puede guardar igual si lo decidiste manualmente. ¿Guardar de todos modos?`);
+}
+
+function chooseLeastRecentlyUsedCandidate({ candidates, historyByPerson, currentUsedIds, partType }){
+  const list = Array.isArray(candidates) ? candidates.filter(Boolean) : [];
+  if(!list.length) return { person:null, repeated:false };
+
+  // Regla principal: elegir primero entre quienes todavía no fueron usados esta semana.
+  // Solo permite repetir automáticamente si no queda ninguna persona habilitada sin usar.
+  const unused = list.filter(p=>!currentUsedIds.has(p.id));
+  const pool = unused.length ? unused : list;
+  let best = null;
+  let bestScore = Infinity;
+  for(const p of pool){
+    const sc = scoreCandidate({
+      person:p,
+      historyByPerson,
+      currentWeekISO:currentWeek(),
+      currentUsedIds:new Set(),
+      partType
+    });
+    if(sc < bestScore || (sc === bestScore && String(p.name||"").localeCompare(String(best?.name||""), "es") < 0)){
+      best = p;
+      bestScore = sc;
+    }
+  }
+  return { person:best, repeated:!!best && currentUsedIds.has(best.id) };
+}
+
+function setSaveStatus(text, ok=true){
+  const el = qs("#saveStatus");
+  if(!el) return;
+  el.textContent = text;
+  el.className = "notice " + (ok ? "ok" : "err");
+  el.style.display = "block";
+}
+
+function clearSaveStatus(){
+  const el = qs("#saveStatus");
+  if(el) el.style.display = "none";
 }
 
 function gotoWeek(newISO){
@@ -110,6 +308,16 @@ weekInput.addEventListener("change", ()=> gotoWeek(weekInput.value));
 qs("#btnPrevWeek").addEventListener("click", ()=> gotoWeek(addDaysISO(weekInput.value, -7)));
 qs("#btnNextWeek").addEventListener("click", ()=> gotoWeek(addDaysISO(weekInput.value, 7)));
 
+auxRoomEnabledField?.addEventListener("change", ()=>{
+  auxRoomEnabledField.dataset.auto = "0";
+  auxRoomEnabledField.dataset.manual = "1";
+  assignments = normalizeAssignmentsForCurrentSettings(assignments);
+  renderAssignments();
+  updateAuxRoomAutoStatus("Cambio manual. Guardá la semana para conservar esta decisión.");
+  markUnsaved("Se cambió la Sala B de esta semana.");
+  show(usesAuxRoom() ? `${auxRoomName()} activada manualmente para esta semana.` : `${auxRoomName()} desactivada manualmente para esta semana.`, usesAuxRoom() ? "ok" : "warn");
+});
+
 for(const el of Object.values(fields)){
   el.addEventListener("input", ()=>{ if(el===fields.wolLink) fields.wolLink.dataset.auto = "0"; markUnsaved("Se modificó la semana."); });
   el.addEventListener("change", ()=>{ markUnsaved("Se modificó la semana."); applyWeekTypeEffects(); });
@@ -118,7 +326,7 @@ for(const el of Object.values(fields)){
 function applyAppDefaults(){
   fields.meetingDay.value ||= dayNameFromISO(weekInput.value);
   fields.meetingTime.value ||= appSettings.defaultTime || "19:30";
-  fields.travelerName.value ||= appSettings.travelerName || "Roberto Armando";
+  fields.travelerName.value ||= appSettings.travelerName || "";
   if(!fields.travelerTalkTitle.value) fields.travelerTalkTitle.value = "Discurso de servicio del viajante";
 }
 
@@ -135,6 +343,7 @@ function maybeApplyNoMeetingDefaults(){
 
 async function loadAll(){
   hideMsg();
+  clearSaveStatus();
   qs("#status").textContent = "Cargando...";
   appSettings = await loadAppSettings();
   people = await loadPeople();
@@ -152,9 +361,31 @@ async function loadAll(){
   fields.openingSong.value = w?.openingSong || "";
   fields.middleSong.value = w?.middleSong || "";
   fields.closingSong.value = w?.closingSong || "";
-  fields.travelerName.value = w?.travelerName || appSettings.travelerName || "Roberto Armando";
+  fields.travelerName.value = w?.travelerName || appSettings.travelerName || "";
   fields.travelerTalkTitle.value = w?.travelerTalkTitle || "Discurso de servicio del viajante";
   parts = (w?.parts && w.parts.length) ? w.parts : makeBaseParts();
+  const wolDetectedAux = hasStudentDiscourseForAux(parts);
+  const hasSavedManualOverride = w?.auxRoomManualOverride === true;
+  const savedAuxValue = hasSavedManualOverride
+    ? w?.auxRoomEnabled === true
+    : (w?.parts?.length ? wolDetectedAux : false);
+
+  // Migración segura: las semanas guardadas con builds anteriores podían quedar
+  // con Sala B activa por una detección demasiado amplia. Si no hay una marca
+  // explícita de cambio manual, se vuelve a calcular desde las partes cargadas:
+  // solo “Discurso” dentro de “Seamos mejores maestros” activa la sala auxiliar.
+  setAuxRoomForWeek(savedAuxValue, {
+    auto: !hasSavedManualOverride && !!w?.parts?.length,
+    manual: hasSavedManualOverride,
+    reason: hasSavedManualOverride
+      ? "Control manual guardado para esta semana. Podés cambiarlo antes de volver a guardar."
+      : (w?.parts?.length
+        ? (wolDetectedAux
+          ? `WOL detectó una parte titulada ‘Discurso’ en Seamos mejores maestros; ${auxRoomName()} queda activa.`
+          : `WOL no detectó ninguna parte titulada ‘Discurso’ en Seamos mejores maestros; ${auxRoomName()} queda desactivada.`)
+        : "Semana nueva: Sala B queda desactivada hasta que WOL detecte una parte titulada ‘Discurso’ en Seamos mejores maestros, o hasta que la actives manualmente.")
+  });
+  assignments = normalizeAssignmentsForCurrentSettings(assignments);
 
   maybeApplyNoMeetingDefaults();
   applyAppDefaults();
@@ -163,7 +394,12 @@ async function loadAll(){
   applyWeekTypeEffects(false);
   renderParts();
   renderAssignments();
-  qs("#status").textContent = "Listo";
+  updateAuxRoomAutoStatus();
+  const savedDate = w?.meetingDateISO || w?.weekISO || w?.id || "";
+  const assigned = countAssignedRows(assignments);
+  qs("#status").textContent = w
+    ? (savedDate && savedDate !== weekISO ? `Listo · datos guardados recuperados de ${fmtDateAR(savedDate)} · ${assigned} asignado(s)` : `Listo · datos guardados cargados · ${assigned} asignado(s)`)
+    : "Listo · semana nueva sin datos guardados";
 }
 
 function buildDefaultAssignments(){
@@ -171,12 +407,29 @@ function buildDefaultAssignments(){
   const rows = [];
   if(!parts.length) parts = makeBaseParts();
   let order = 0;
-  rows.push({ order:++order, key:"presidente", type:"Presidente", title:"Palabras de introducción" });
-  rows.push({ order:++order, key:"oracion_inicial", type:"Oración inicial", title:"Oración inicial" });
+  rows.push({ order:++order, key:"presidente", type:"Presidente", title:"Palabras de introducción", room:"", isAuxRoom:false });
+  rows.push({ order:++order, key:"oracion_inicial", type:"Oración inicial", title:"Oración inicial", room:"", isAuxRoom:false });
   for(const [idx, p] of parts.entries()){
-    rows.push({ order:++order, key:`part_${idx+1}_${p.type}`, type:p.type, title:p.title, section:p.section, minutes:p.minutes||"", needsHelper: !!p.needsHelper, detail:p.detail||"", number:p.number||"", person1Id:"", person1Name:"", person2Id:"", person2Name:"" });
+    const baseKey = `part_${idx+1}_${p.type}`;
+    const eligibleForAux = usesAuxRoom() && isAuxEligibleType(p.type);
+    rows.push(makeAssignmentRow({
+      order:++order,
+      key:baseKey,
+      part:p,
+      room: eligibleForAux ? mainRoomName() : "",
+      isAuxRoom:false
+    }));
+    if(eligibleForAux){
+      rows.push(makeAssignmentRow({
+        order:++order,
+        key:`${baseKey}_sala_b`,
+        part:p,
+        room:auxRoomName(),
+        isAuxRoom:true
+      }));
+    }
   }
-  rows.push({ order:++order, key:"oracion_final", type:"Oración final", title:"Oración final" });
+  rows.push({ order:++order, key:"oracion_final", type:"Oración final", title:"Oración final", room:"", isAuxRoom:false });
   return rows;
 }
 
@@ -199,20 +452,38 @@ function candidateLabel(person, historyByPerson){
   return `${person.name} · hace ${weeks} sem.`;
 }
 
+function escHtml(s){
+  return String(s ?? "").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+}
+
+function optionHtml(value, label){
+  return `<option value="${escHtml(value)}">${escHtml(label)}</option>`;
+}
+
 function optionsForRow(row, helper=false, historyByPerson=null){
   const opts = ["<option value=''>—</option>"];
+  const ids = new Set([""]);
   const main = assignments.find(x=>x.key===row.key);
+  const savedId = helper ? row.person2Id : row.person1Id;
+  const savedName = helper ? row.person2Name : row.person1Name;
   for(const p of people){
     const ok = helper ? Rules.helperAllowed(people.find(x=>x.id===main?.person1Id), p) : Rules.allowedFor(row.type, p);
     if(!ok) continue;
+    ids.add(p.id);
     const label = historyByPerson ? candidateLabel(p, historyByPerson) : p.name;
-    opts.push(`<option value="${p.id}">${label}</option>`);
+    opts.push(optionHtml(p.id, label));
+  }
+  // Si una asignación guardada pertenece a una persona que ya no aparece por filtros
+  // o permisos, se conserva para no borrarla involuntariamente al guardar de nuevo.
+  if(savedId && !ids.has(savedId)){
+    opts.push(optionHtml(savedId, `${savedName || "Asignado guardado"} · guardado`));
   }
   return opts.join("");
 }
 
 function rowSubtitle(row){
   const meta = [];
+  if(row.room) meta.push(row.room);
   if(row.detail) meta.push(row.detail);
   if(row.minutes) meta.push(`${row.minutes} min.`);
   return meta.join(" · ");
@@ -233,7 +504,7 @@ function renderAssignments(historyByPerson=null){
     asgBox.innerHTML = `<div class="small">No se generan asignaciones para esta semana.</div>`;
     return;
   }
-  if(!assignments.length) assignments = buildDefaultAssignments();
+  assignments = normalizeAssignmentsForCurrentSettings(assignments);
 
   const wrap = document.createElement("div");
   for(const group of groupedAssignments()){
@@ -259,6 +530,7 @@ function renderAssignments(historyByPerson=null){
       row.person1Id = sel.value; row.person1Name = p?.name || "";
       if(row.needsHelper){ row.person2Id = ""; row.person2Name = ""; renderAssignments(historyByPerson); }
       markUnsaved("Se editaron asignaciones.");
+      if(sel.value) warnDuplicateAssignments({ popup:true, saveStatus:true });
     });
   });
   qsa("[data-h2]", asgBox).forEach(sel=>{
@@ -268,6 +540,7 @@ function renderAssignments(historyByPerson=null){
       const p = people.find(x=>x.id===sel.value);
       row.person2Id = sel.value; row.person2Name = p?.name || "";
       markUnsaved("Se editaron asignaciones.");
+      if(sel.value) warnDuplicateAssignments({ popup:true, saveStatus:true });
     });
   });
   qsa("[data-title]", asgBox).forEach(inp=>{
@@ -290,6 +563,7 @@ function applyWeekTypeEffects(resetAssignments=true){
       if(resetAssignments) assignments = buildDefaultAssignments();
     }
   }
+  assignments = normalizeAssignmentsForCurrentSettings(assignments);
   renderParts();
   renderAssignments();
 }
@@ -321,31 +595,58 @@ async function suggest(){
     byPerson[h.personId].push(h);
   }
   const currentUsed = new Set();
+  const automaticRepeats = [];
 
   for(const row of assignments){
     const candidates = people.filter(p=>Rules.allowedFor(row.type, p));
     if(!row.person1Id){
-      let best = null, bestScore = Infinity;
-      for(const p of candidates){
-        const sc = scoreCandidate({ person:p, historyByPerson:byPerson, currentWeekISO:currentWeek(), currentUsedIds:currentUsed, partType:row.type });
-        if(sc < bestScore){ best = p; bestScore = sc; }
+      const picked = chooseLeastRecentlyUsedCandidate({
+        candidates,
+        historyByPerson:byPerson,
+        currentUsedIds:currentUsed,
+        partType:row.type
+      });
+      const best = picked.person;
+      if(best){
+        row.person1Id = best.id;
+        row.person1Name = best.name;
+        if(picked.repeated) automaticRepeats.push(`${best.name} en ${row.title || row.type}`);
+        currentUsed.add(best.id);
       }
-      if(best){ row.person1Id = best.id; row.person1Name = best.name; currentUsed.add(best.id); }
     } else currentUsed.add(row.person1Id);
 
     if(row.needsHelper && !row.person2Id){
       const main = people.find(x=>x.id===row.person1Id);
       const helperCandidates = people.filter(p=>Rules.helperAllowed(main, p));
-      let best = null, bestScore = Infinity;
-      for(const p of helperCandidates){
-        const sc = scoreCandidate({ person:p, historyByPerson:byPerson, currentWeekISO:currentWeek(), currentUsedIds:currentUsed, partType:"Ayudante" });
-        if(sc < bestScore){ best = p; bestScore = sc; }
+      const picked = chooseLeastRecentlyUsedCandidate({
+        candidates:helperCandidates,
+        historyByPerson:byPerson,
+        currentUsedIds:currentUsed,
+        partType:"Ayudante"
+      });
+      const best = picked.person;
+      if(best){
+        row.person2Id = best.id;
+        row.person2Name = best.name;
+        if(picked.repeated) automaticRepeats.push(`${best.name} como ayudante en ${row.title || row.type}`);
+        currentUsed.add(best.id);
       }
-      if(best){ row.person2Id = best.id; row.person2Name = best.name; currentUsed.add(best.id); }
+    } else if(row.needsHelper && row.person2Id){
+      currentUsed.add(row.person2Id);
     }
   }
   renderAssignments(byPerson);
-  show("Sugerencias aplicadas. Revisá y ajustá lo necesario.");
+  markUnsaved("Se sugirieron asignados.");
+  const duplicated = duplicateAssignmentGroups();
+  if(automaticRepeats.length || duplicated.length){
+    const base = automaticRepeats.length
+      ? `Sugerencias aplicadas: ${countAssignedRows()} asignado(s). Se repitió automáticamente solo porque no había otra persona habilitada sin usar: ${automaticRepeats.join(", ")}.`
+      : `Sugerencias aplicadas: ${countAssignedRows()} asignado(s), pero hay repetidos por asignaciones manuales previas.`;
+    show(`${base} Revisá antes de guardar.`, "warn");
+    warnDuplicateAssignments({ popup:true, saveStatus:true });
+  } else {
+    show(`Sugerencias aplicadas: ${countAssignedRows()} asignado(s). No se repitieron personas. Revisá y tocá Guardar semana para confirmarlo.`);
+  }
 }
 
 btnAutoWOL?.addEventListener("click", ()=>{
@@ -368,53 +669,37 @@ qs("#btnLoadWOL").addEventListener("click", async ()=>{
   try{
     const result = await fetchAndParseWOL({ wolUrl, proxyBase: Storage.get("proxyBase", "") || null });
     parts = result.parts?.length ? result.parts : makeBaseParts();
+    const hasAuxDiscourse = hasStudentDiscourseForAux(parts);
+    setAuxRoomForWeek(hasAuxDiscourse, {
+      auto:true,
+      manual:false,
+      reason: hasAuxDiscourse
+        ? `WOL detectó un discurso en “Seamos mejores maestros”; se activó ${auxRoomName()} automáticamente. Podés desactivarla manualmente si hace falta.`
+        : `WOL no detectó discurso en “Seamos mejores maestros”; ${auxRoomName()} queda desactivada esta semana. Podés activarla manualmente si hace falta.`
+    });
     fields.reading.value = result.meta.reading || fields.reading.value;
     fields.openingSong.value = result.meta.openingSong || fields.openingSong.value;
     fields.middleSong.value = result.meta.middleSong || fields.middleSong.value;
     fields.closingSong.value = result.meta.closingSong || fields.closingSong.value;
     assignments = buildDefaultAssignments();
     applyWeekTypeEffects();
-    show("Programa cargado desde WOL.");
+    updateAuxRoomAutoStatus();
+    show(hasAuxDiscourse
+      ? `Programa cargado desde WOL. WOL detectó discurso en Seamos mejores maestros y activó ${auxRoomName()} automáticamente.`
+      : `Programa cargado desde WOL. No se detectó discurso en Seamos mejores maestros y ${auxRoomName()} quedó desactivada.`, hasAuxDiscourse ? "ok" : "warn");
   }catch(e){
     parts = makeBaseParts();
     assignments = buildDefaultAssignments();
     applyWeekTypeEffects();
+    updateAuxRoomAutoStatus("No se pudo leer WOL. Se conserva la decisión manual de Sala B para esta semana.");
     show(`No se pudo leer WOL: ${e?.message || "error desconocido"}. Dejé el formulario completo para cargar todo manualmente.`, "warn");
   }
 });
 
 qs("#btnSuggest").addEventListener("click", suggest);
-qs("#btnToBoard").addEventListener("click", async ()=>{
-  try{
-    syncAssignmentsFromDOM();
-    const weekISO = currentWeek();
-    Storage.set("currentWeekISO", weekISO);
-    const weekData = {
-      wolUrl: fields.wolLink.value.trim(),
-      meetingDay: fields.meetingDay.value.trim(),
-      meetingTime: fields.meetingTime.value.trim(),
-      weekType: fields.weekType.value,
-      specialReason: fields.specialReason.value.trim(),
-      reading: fields.reading.value.trim(),
-      openingSong: fields.openingSong.value.trim(),
-      middleSong: fields.middleSong.value.trim(),
-      closingSong: fields.closingSong.value.trim(),
-      travelerName: fields.travelerName.value.trim(),
-      travelerTalkTitle: fields.travelerTalkTitle.value.trim(),
-      parts: isNoMeeting() ? [] : parts
-    };
-    await saveWeek(weekISO, weekData);
-    await saveAssignments(weekISO, isNoMeeting() ? [] : assignments);
-    location.href = `tablero.html?week=${encodeURIComponent(weekISO)}`;
-  }catch(e){
-    show(`No se pudo preparar el tablero: ${e?.message || e}`, "err");
-  }
-});
 
-qs("#btnSave").addEventListener("click", async ()=>{
-  syncAssignmentsFromDOM();
-  const weekISO = currentWeek();
-  const weekData = {
+function collectWeekData(){
+  return {
     wolUrl: fields.wolLink.value.trim(),
     meetingDay: fields.meetingDay.value.trim(),
     meetingTime: fields.meetingTime.value.trim(),
@@ -426,14 +711,108 @@ qs("#btnSave").addEventListener("click", async ()=>{
     closingSong: fields.closingSong.value.trim(),
     travelerName: fields.travelerName.value.trim(),
     travelerTalkTitle: fields.travelerTalkTitle.value.trim(),
+    auxRoomEnabled: usesAuxRoom(),
+    auxRoomAutoByWOL: auxRoomEnabledField?.dataset.auto === "1",
+    auxRoomManualOverride: auxRoomEnabledField?.dataset.manual === "1",
+    auxRoomHasStudentDiscourse: hasStudentDiscourseForAux(parts),
+    auxRoomName: auxRoomName(),
     parts: isNoMeeting() ? [] : parts
   };
+}
+
+async function saveCurrentWeek({withHistory=false}={}){
+  syncAssignmentsFromDOM();
+  if(!confirmDuplicateAssignmentsBeforeSave()){
+    throw new Error("Guardado cancelado: hay asignaciones repetidas para revisar.");
+  }
+  const weekISO = currentWeek();
+  const weekData = collectWeekData();
+  const expectedAssigned = isNoMeeting() ? 0 : countAssignedRows(assignments);
   await saveWeek(weekISO, weekData);
   await saveAssignments(weekISO, isNoMeeting() ? [] : assignments);
-  if(!isNoMeeting()) await appendHistoryFromWeek(weekISO);
+  const savedRows = isNoMeeting() ? [] : await loadAssignments(weekISO);
+  const savedAssigned = countAssignedRows(savedRows);
+  if(expectedAssigned > 0 && savedAssigned < expectedAssigned){
+    throw new Error(`Firebase guardó ${savedAssigned} de ${expectedAssigned} asignado(s). Revisá permisos/reglas y volvé a intentar.`);
+  }
+  if(withHistory && !isNoMeeting()) await appendHistoryFromWeek(weekISO);
   Storage.set("currentWeekISO", weekISO);
-  show("Semana guardada.");
-  showToast("Guardado con éxito");
+  return { weekISO, assignedCount:savedAssigned, rowCount:savedRows.length };
+}
+qs("#btnToBoard").addEventListener("click", async ()=>{
+  try{
+    const result = await saveCurrentWeek();
+    location.href = `tablero.html?week=${encodeURIComponent(result.weekISO)}`;
+  }catch(e){
+    show(`No se pudo preparar el tablero: ${e?.message || e}`, "err");
+  }
+});
+
+qs("#btnSave").addEventListener("click", async ()=>{
+  const btn = qs("#btnSave");
+  try{
+    btn.disabled = true;
+    btn.textContent = "Guardando...";
+    const result = await saveCurrentWeek({withHistory:true});
+    const stamp = new Date().toLocaleTimeString("es-AR", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+    const text = `Guardado confirmado a las ${stamp}: ${result.assignedCount} asignado(s) en ${result.rowCount} renglón(es). Al volver a elegir esta semana se cargará lo guardado.`;
+    show(text);
+    setSaveStatus(text, true);
+    showToast("Guardado confirmado");
+  }catch(e){
+    const text = `No se pudo guardar la semana: ${e?.message || e}`;
+    show(text, "err");
+    setSaveStatus(text, false);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Guardar semana";
+  }
+});
+
+
+function blankAssignedPeople(){
+  syncAssignmentsFromDOM();
+  assignments = normalizeAssignmentsForCurrentSettings(assignments).map(r=>({
+    ...r,
+    person1Id:"",
+    person1Name:"",
+    person2Id:"",
+    person2Name:""
+  }));
+  renderAssignments();
+}
+
+qs("#btnClearAssigned")?.addEventListener("click", async ()=>{
+  if(!confirm("¿Limpiar los asignados de esta semana y guardar la semana sin nombres? El programa y las partes quedan igual.")) return;
+  try{
+    blankAssignedPeople();
+    const result = await saveCurrentWeek({withHistory:false});
+    const text = `Asignados limpiados y guardados. Quedaron ${result.assignedCount} asignado(s). Ahora podés usar Sugerir asignados para arrancar de nuevo.`;
+    show(text, "warn");
+    setSaveStatus(text, true);
+    showToast("Asignados limpiados");
+  }catch(e){
+    const text = `No se pudieron limpiar los asignados: ${e?.message || e}`;
+    show(text, "err");
+    setSaveStatus(text, false);
+  }
+});
+
+qs("#btnDeleteWeekAssignments")?.addEventListener("click", async ()=>{
+  if(!confirm("¿Eliminar de Firebase los documentos de asignados de esta semana? Esto deja la semana lista para cargar/sugerir de nuevo.")) return;
+  try{
+    await clearAssignmentsForWeek(currentWeek());
+    assignments = buildDefaultAssignments();
+    renderAssignments();
+    const text = "Asignados guardados eliminados de esta semana. Podés usar Sugerir asignados y luego Guardar semana.";
+    show(text, "warn");
+    setSaveStatus(text, true);
+    showToast("Asignados eliminados");
+  }catch(e){
+    const text = `No se pudieron eliminar los asignados: ${e?.message || e}`;
+    show(text, "err");
+    setSaveStatus(text, false);
+  }
 });
 
 loadAll();

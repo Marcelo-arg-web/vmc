@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Importar Congregación Centro — Planificador VMC</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="container nav">
+      <div class="brand">
+        <span id="appName">Planificador VMC</span>
+        <span class="badge" id="appVersion"></span>
+        <span class="badge" id="authStatus">—</span>
+      </div>
+      <div class="navlinks">
+        <a href="index.html">Inicio</a>
+        <a href="semana.html">Semana</a>
+        <a href="personas.html">Personas</a>
+        <a href="tablero.html">Tablero</a>
+        <a href="settings.html">Configuración</a>
+        <a href="login.html">Ingreso</a>
+        <button id="btnLogout" class="ghost" style="display:none">Salir</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card" style="max-width:880px;margin:28px auto;">
+      <h1>Importar Congregación Centro</h1>
+      <p>Esta herramienta carga los nombres del tablero de grupos que enviaste y guarda la congregación como <b>Centro</b>.</p>
+      <div class="notice warn">
+        Se importa solo la información básica: nombre, grupo, sexo estimado y rol cuando aparece como siervo o anciano. Después podés editar qué asignaciones puede hacer cada persona.
+      </div>
+      <div class="row" style="margin:16px 0;gap:14px;align-items:flex-start;">
+        <label class="row"><input id="clearExisting" type="checkbox" checked> <span>Borrar personas, semanas, asignaciones e historial actuales antes de importar</span></label>
+      </div>
+      <div class="row" style="gap:10px;flex-wrap:wrap;">
+        <button id="btnImport" class="success" type="button">Importar / actualizar Centro</button>
+        <a class="btn ghost" href="personas.html">Volver a Personas</a>
+        <a class="btn ghost" href="settings.html">Volver a Configuración</a>
+      </div>
+      <div id="out" class="small" style="white-space:pre-wrap;margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { mountHeader, requireAuthOrRedirect } from "./js/ui_common.js";
+    import { ensureInit, requireSignedIn, db, collection, getDocs, doc, setDoc, deleteDoc } from "./js/firebase.js";
+    import { slugify } from "./js/app.js";
+
+    mountHeader();
+    await requireAuthOrRedirect();
+
+    const people = [
+      {name:"Alfredo Pérez", sex:"H", role:"Siervo Ministerial", group:"Grupo 1", notes:"Siervo de Grupo 1"},
+      {name:"José G. Carbajal", sex:"H", role:"Publicador", group:"Grupo 1"},
+      {name:"Paula Carbajal", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Diego Contardo", sex:"H", role:"Publicador", group:"Grupo 1"},
+      {name:"Débora Jiménez", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Analía Juárez", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Teresa Melo", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Lucía Mamanni", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Ana Navarro", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Julio Navarro", sex:"H", role:"Publicador", group:"Grupo 1"},
+      {name:"Martina Navarro", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Sara Navarro", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Edith Pérez", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Micaela Pérez", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Alejandra Prieto", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Silvio Prieto", sex:"H", role:"Anciano", group:"Grupo 1", approved:true, notes:"A"},
+      {name:"Trinidad Puentedura", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Cecilia Ramírez", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Mario Ramírez", sex:"H", role:"Publicador", group:"Grupo 1"},
+      {name:"Emilia Ramírez", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Darío Ramírez", sex:"H", role:"Publicador", group:"Grupo 1"},
+      {name:"Georgina Ramírez", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Gabriela Rojas", sex:"M", role:"Publicadora", group:"Grupo 1"},
+      {name:"Liliana Suárez", sex:"M", role:"Publicadora", group:"Grupo 1"},
+
+      {name:"Gabriel Carbajal", sex:"H", role:"Siervo Ministerial", group:"Grupo 2", notes:"Siervo de Grupo 2"},
+      {name:"Daniel Alderete", sex:"H", role:"Publicador", group:"Grupo 2"},
+      {name:"María Alderete", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Ana Altamiranda", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Jazmín Aráoz", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Paola Aráoz", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Sandra Carbajal", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Carlos Cena", sex:"H", role:"Publicador", group:"Grupo 2"},
+      {name:"Maximiliano Cena", sex:"H", role:"Publicador", group:"Grupo 2"},
+      {name:"Melina Cena", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Sol Cena", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Zamira Cena", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Beatriz Conticello", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Mauro Daniel", sex:"H", role:"Publicador", group:"Grupo 2"},
+      {name:"Isabel Hernández", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Hermesto Mateo", sex:"H", role:"Publicador", group:"Grupo 2"},
+      {name:"Anabella Mateo", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"José Palla", sex:"H", role:"Publicador", group:"Grupo 2"},
+      {name:"Paola Palla", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Andrea Salvadeo", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Julia Salvadeo", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Cristian Valdez", sex:"H", role:"Anciano", group:"Grupo 2", approved:true, notes:"A"},
+      {name:"Mary Villagran", sex:"M", role:"Publicadora", group:"Grupo 2"},
+      {name:"Noemí Zelaya", sex:"M", role:"Publicadora", group:"Grupo 2"},
+
+      {name:"Bruno Lefevbre", sex:"H", role:"Siervo Ministerial", group:"Grupo 3", notes:"Siervo de Grupo 3"},
+      {name:"Marilyn Aro", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Abigail Aro", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Ricardo Cesca", sex:"H", role:"Publicador", group:"Grupo 3"},
+      {name:"Jorgelina Costilla", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Lila Díaz", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Isabel Elías", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Ramón Elías", sex:"H", role:"Publicador", group:"Grupo 3"},
+      {name:"Ana Florez", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Beatriz Fonts", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Mary Garzón", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Mirta Gómez", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Carolina Jiménez", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Sofía Lefevbre", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Estela Mamani", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Jorge Mieres", sex:"H", role:"Publicador", group:"Grupo 3"},
+      {name:"Silvana Mieres", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Muriel Mieres", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Dámaris Torres", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Jael Torres", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Ezequiel Torres", sex:"H", role:"Anciano", group:"Grupo 3", approved:true, notes:"A"},
+      {name:"Alejandra Toscano", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Amalia Toscano", sex:"M", role:"Publicadora", group:"Grupo 3"},
+      {name:"Isaías Trejo", sex:"H", role:"Publicador", group:"Grupo 3"},
+
+      {name:"Franco Cervantes", sex:"H", role:"Siervo Ministerial", group:"Grupo 4", notes:"Siervo de Grupo 4"},
+      {name:"Elsa Amilaga", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Perla Arreyes", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Francesca Cervantes", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Paula Cervantes", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Fiorella Cena", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Elías Escobar", sex:"H", role:"Anciano", group:"Grupo 4", approved:true, notes:"A"},
+      {name:"Kamila Marino", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Maximiliano Marino", sex:"H", role:"Publicador", group:"Grupo 4"},
+      {name:"Teresa Mopti", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Selva Nazur", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Meliza Lescano", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Jorgelina Riti", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Lucía Riti", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"José Rodríguez", sex:"H", role:"Publicador", group:"Grupo 4"},
+      {name:"Brenda Valdivieso", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Daniela Valdivieso", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Julio Valdivieso", sex:"H", role:"Publicador", group:"Grupo 4"},
+      {name:"Noemí Valdivieso", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Patricia Zabala", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Daiana Zarate", sex:"M", role:"Publicadora", group:"Grupo 4"},
+      {name:"Daniel Zarate", sex:"H", role:"Publicador", group:"Grupo 4"},
+      {name:"Javier Zarate", sex:"H", role:"Publicador", group:"Grupo 4"},
+      {name:"Juana Zarate", sex:"M", role:"Publicadora", group:"Grupo 4"},
+
+      {name:"José Pedraza", sex:"H", role:"Siervo Ministerial", group:"Grupo 5", notes:"Siervo de Grupo 5"},
+      {name:"Dolores Andrade", sex:"M", role:"Publicadora", group:"Grupo 5"},
+      {name:"Fabricio Carbajal", sex:"H", role:"Publicador", group:"Grupo 5"},
+      {name:"Agustina Carbajal", sex:"M", role:"Publicadora", group:"Grupo 5"},
+      {name:"Huerto Figueroa", sex:"H", role:"Publicador", group:"Grupo 5"},
+      {name:"Delfina Juárez", sex:"M", role:"Publicadora", group:"Grupo 5"},
+      {name:"Sergio Juárez", sex:"H", role:"Publicador", group:"Grupo 5"},
+      {name:"Silvina Kasiañuk", sex:"M", role:"Publicadora", group:"Grupo 5"},
+      {name:"Rosa Kasiañuk", sex:"M", role:"Publicadora", group:"Grupo 5"},
+      {name:"Miguel Kasiañuk", sex:"H", role:"Publicador", group:"Grupo 5"},
+      {name:"Olga Navarro", sex:"M", role:"Publicadora", group:"Grupo 5"},
+      {name:"Evelym Pedraza", sex:"M", role:"Publicadora", group:"Grupo 5"},
+      {name:"Roque Rodríguez", sex:"H", role:"Anciano", group:"Grupo 5", approved:true, notes:"A"},
+      {name:"Beatriz Rodríguez", sex:"M", role:"Publicadora", group:"Grupo 5"},
+      {name:"Clara Sanchez", sex:"M", role:"Publicadora", group:"Grupo 5"},
+      {name:"Nancy Sosa", sex:"M", role:"Publicadora", group:"Grupo 5"},
+      {name:"Olga Sosa", sex:"M", role:"Publicadora", group:"Grupo 5"},
+      {name:"Mirta Taverna", sex:"M", role:"Publicadora", group:"Grupo 5"},
+      {name:"Ana Vega", sex:"M", role:"Publicadora", group:"Grupo 5"}
+    ];
+
+    const defaultCan = (p)=>{
+      if(p.role === "Anciano") return {presidir:true, orar:true, tesoros:true, perlas:true, lecturaBiblia:true, estudiante:true, ayudante:true, discursoEstudiante:true, vidaCristiana:true, necesidades:true, conductorEbc:true, lectorEbc:true};
+      if(p.role === "Siervo Ministerial") return {presidir:true, orar:true, tesoros:true, perlas:true, lecturaBiblia:true, estudiante:true, ayudante:true, discursoEstudiante:true, vidaCristiana:true, necesidades:false, conductorEbc:true, lectorEbc:true};
+      if(p.sex === "H") return {presidir:false, orar:false, tesoros:false, perlas:false, lecturaBiblia:false, estudiante:true, ayudante:true, discursoEstudiante:true, vidaCristiana:false, necesidades:false, conductorEbc:false, lectorEbc:false};
+      return {presidir:false, orar:false, tesoros:false, perlas:false, lecturaBiblia:false, estudiante:true, ayudante:true, discursoEstudiante:false, vidaCristiana:false, necesidades:false, conductorEbc:false, lectorEbc:false};
+    };
+
+    const out = document.querySelector("#out");
+    function log(line){ out.textContent += line + "\n"; }
+
+    async function clearCollection(name){
+      const snap = await getDocs(collection(db(), name));
+      let n = 0;
+      for(const d of snap.docs){ await deleteDoc(doc(db(), name, d.id)); n++; }
+      return n;
+    }
+
+    document.querySelector("#btnImport").addEventListener("click", async ()=>{
+      const btn = document.querySelector("#btnImport");
+      btn.disabled = true;
+      out.textContent = "";
+      try{
+        await ensureInit();
+        await requireSignedIn(false);
+        if(document.querySelector("#clearExisting").checked){
+          log("Limpiando datos actuales...");
+          for(const col of ["personas", "semanas", "asignaciones", "historial"]){
+            const n = await clearCollection(col);
+            log(`- ${col}: ${n} documentos borrados`);
+          }
+        }
+        log("Guardando configuración de la congregación...");
+        await setDoc(doc(db(), "config", "app"), {
+          congregacion:"Centro",
+          travelerName:"",
+          defaultTime:"19:30",
+          noMeetingDates:"",
+          updatedAt:new Date().toISOString()
+        }, {merge:true});
+        log(`Importando ${people.length} personas...`);
+        for(const p of people){
+          const id = slugify(p.name).slice(0,120);
+          await setDoc(doc(db(), "personas", id), {
+            name:p.name,
+            sex:p.sex || "",
+            role:p.role || "",
+            student:true,
+            active:true,
+            approved:!!p.approved || p.role === "Anciano" || p.role === "Siervo Ministerial",
+            spouseOnly:false,
+            familyGroup:p.group || "",
+            can: defaultCan(p),
+            notes:p.notes || "",
+            updatedAt:new Date().toISOString()
+          }, {merge:true});
+        }
+        log("\nListo. Congregación Centro cargada correctamente.");
+        log("Podés ir a Personas para revisar nombres, roles y asignaciones permitidas.");
+      }catch(e){
+        log("\nERROR: " + (e.message || e));
+      }finally{
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

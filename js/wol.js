@@ -1,10 +1,19 @@
 import { markUnsaved } from "./app.js";
 
 const AUTO_WOL_BASE = {
-  anchorISO: "2026-03-05",
-  anchorCode: 202026081,
   urlPrefix: "https://wol.jw.org/es/wol/d/r4/lp-s/"
 };
+
+// WOL no usa una numeración semanal estrictamente lineal durante todo el año.
+// Cada número de la Guía de actividades puede insertar portadas/índices o cambiar de bloque.
+// Estos anclajes fueron ajustados con enlaces reales de 2026.
+const WOL_2026_ANCHORS = [
+  { startISO: "2026-03-02", firstCode: 202026081, label: "marzo-abril 2026" },
+  { startISO: "2026-05-04", firstCode: 202026161, label: "mayo-junio 2026" },
+  { startISO: "2026-07-06", firstCode: 202026241, label: "julio-agosto 2026" },
+  // En septiembre-octubre la portada queda en 202026251 y la primera semana útil empieza en 202026252.
+  { startISO: "2026-09-07", firstCode: 202026252, label: "septiembre-octubre 2026" }
+];
 
 function parseISODate(iso) {
   const [y, m, d] = (iso || "").split("-").map(Number);
@@ -12,43 +21,82 @@ function parseISODate(iso) {
   return new Date(y, m - 1, d);
 }
 
-function normalizeToMeetingWeekThursday(iso) {
+function normalizeToMeetingWeekMonday(iso) {
   const d = parseISODate(iso);
   if (!d) return null;
   const jsDay = d.getDay();
   const mondayBased = (jsDay + 6) % 7;
   const monday = new Date(d);
+  monday.setHours(0, 0, 0, 0);
   monday.setDate(d.getDate() - mondayBased);
-  const thursday = new Date(monday);
-  thursday.setDate(monday.getDate() + 3);
-  return thursday;
+  return monday;
+}
+
+function weeksBetween(a, b) {
+  return Math.round((a - b) / 604800000);
+}
+
+function getWOLAnchorForWeek(monday) {
+  let selected = null;
+  for (const item of WOL_2026_ANCHORS) {
+    const start = parseISODate(item.startISO);
+    if (start && monday >= start) selected = { ...item, start };
+  }
+  return selected;
+}
+
+export function predictWOLCodeFromWeekISO(weekISO) {
+  const monday = normalizeToMeetingWeekMonday(weekISO);
+  if (!monday) return null;
+  const anchor = getWOLAnchorForWeek(monday);
+  if (!anchor) return null;
+  const diffWeeks = weeksBetween(monday, anchor.start);
+  if (diffWeeks < 0) return null;
+  return anchor.firstCode + diffWeeks;
 }
 
 export function predictWOLUrlFromWeekISO(weekISO) {
-  const targetThursday = normalizeToMeetingWeekThursday(weekISO);
-  const anchorThursday = parseISODate(AUTO_WOL_BASE.anchorISO);
-  if (!targetThursday || !anchorThursday) return "";
-  if (targetThursday < anchorThursday) return "";
-  const diffWeeks = Math.round((targetThursday - anchorThursday) / 604800000);
-  const code = AUTO_WOL_BASE.anchorCode + diffWeeks;
-  return `${AUTO_WOL_BASE.urlPrefix}${code}`;
+  const code = predictWOLCodeFromWeekISO(weekISO);
+  return code ? `${AUTO_WOL_BASE.urlPrefix}${code}` : "";
+}
+
+export function predictWOLInfoFromWeekISO(weekISO) {
+  const monday = normalizeToMeetingWeekMonday(weekISO);
+  if (!monday) return null;
+  const anchor = getWOLAnchorForWeek(monday);
+  const code = predictWOLCodeFromWeekISO(weekISO);
+  if (!anchor || !code) return null;
+  return { code, url: `${AUTO_WOL_BASE.urlPrefix}${code}`, issue: anchor.label };
+}
+
+function expandWOLDocumentUrls(wolUrl) {
+  const clean = (wolUrl || "").trim();
+  if (!clean) return [];
+
+  // Importante: no probar números vecinos de WOL. Si el usuario pega 202026247,
+  // la app debe leer 202026247 y no saltar a 202026248, porque podría activar
+  // Sala B por un discurso de otra semana.
+  const m = clean.match(/^(https?:\/\/wol\.jw\.org\/es\/wol\/d\/r4\/lp-s\/)(\d+)(?:[/?#].*)?$/i);
+  return m ? [`${m[1]}${m[2]}`] : [clean];
 }
 
 export function buildFetchCandidates(wolUrl, proxyBase) {
-  const clean = (wolUrl || "").trim();
-  if (!clean) return [];
-  const noProto = clean.replace(/^https?:\/\//i, "");
-  const encoded = encodeURIComponent(clean);
+  const urls = expandWOLDocumentUrls(wolUrl);
   const out = [];
   const add = (u) => { if (u && !out.includes(u)) out.push(u); };
 
-  if (proxyBase) add(proxyBase + encoded);
-  add(`https://api.allorigins.win/get?url=${encoded}`);
-  add(`https://api.allorigins.win/raw?url=${encoded}`);
-  add(`https://api.codetabs.com/v1/proxy?quest=${encoded}`);
-  add(`https://corsproxy.io/?${encoded}`);
-  add(`https://r.jina.ai/http://${noProto}`);
-  add(clean);
+  for (const clean of urls) {
+    const noProto = clean.replace(/^https?:\/\//i, "");
+    const encoded = encodeURIComponent(clean);
+
+    if (proxyBase) add(proxyBase + encoded);
+    add(`https://api.allorigins.win/get?url=${encoded}`);
+    add(`https://api.allorigins.win/raw?url=${encoded}`);
+    add(`https://api.codetabs.com/v1/proxy?quest=${encoded}`);
+    add(`https://corsproxy.io/?${encoded}`);
+    add(`https://r.jina.ai/http://${noProto}`);
+    add(clean);
+  }
   return out;
 }
 
@@ -213,8 +261,12 @@ function parseTesoros(lines, reading) {
   return parts;
 }
 
+function isStudentDiscourseTitle(title) {
+  return /^discurso(?:\b|$)/i.test(norm(title));
+}
+
 function parseStudentType(title) {
-  return /discurso/i.test(title) ? "Discurso de estudiante" : "Asignación estudiantil";
+  return isStudentDiscourseTitle(title) ? "Discurso de estudiante" : "Asignación estudiantil";
 }
 
 function parseStudentParts(lines) {
@@ -251,7 +303,7 @@ function parseStudentParts(lines) {
       title,
       minutes,
       detail: compact(detailBits.join(" ")),
-      needsHelper: !/discurso/i.test(title),
+      needsHelper: !isStudentDiscourseTitle(title),
       number: String(order)
     };
 
@@ -334,7 +386,7 @@ function parseProgramFromText(rawText) {
           title: compact(m[2]),
           minutes: Number(m[3]) || "",
           detail: compact(m[4]),
-          needsHelper: !/discurso/i.test(m[2]),
+          needsHelper: !isStudentDiscourseTitle(m[2]),
           number: String(order)
         });
       }

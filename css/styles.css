@@ -158,3 +158,106 @@ label.row{align-items:center}
 
 button.secondary, button.success, button:not(.ghost){box-shadow:0 8px 18px rgba(29,78,216,.18)}
 button.secondary:hover, button.success:hover, button:not(.ghost):hover{filter:brightness(.98)}
+
+/* Ingreso seguro */
+.auth-page{
+  min-height:100%;
+  background: radial-gradient(circle at top left, #dbeafe 0, transparent 32%), var(--bg);
+}
+.auth-shell{
+  min-height: calc(100vh - 82px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.auth-card{
+  width:min(100%, 540px);
+  padding:22px;
+}
+.auth-hero{
+  display:flex;
+  gap:14px;
+  align-items:center;
+  margin-bottom:18px;
+}
+.auth-icon{
+  width:54px;
+  height:54px;
+  border-radius:18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#eef2ff;
+  color:#1d4ed8;
+  font-size:26px;
+  flex:0 0 auto;
+}
+.auth-hero h1{
+  margin:0 0 4px;
+  font-size:28px;
+  line-height:1.1;
+}
+.auth-hero p{margin:0;color:var(--muted)}
+.auth-tabs{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:8px;
+  margin:14px 0 16px;
+}
+.auth-tab{
+  width:100%;
+}
+.auth-tab.active{
+  background:var(--blue);
+  color:#fff;
+}
+.auth-panel{
+  display:grid;
+  gap:12px;
+}
+.auth-panel[hidden]{display:none}
+.field-block{
+  display:grid;
+  gap:6px;
+  font-weight:700;
+}
+.field-block span{
+  font-size:13px;
+  color:var(--muted);
+}
+.field-block input{
+  width:100%;
+}
+.password-wrap{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.password-wrap input{
+  flex:1 1 auto;
+  min-width:0;
+}
+.password-toggle{
+  flex:0 0 auto;
+  min-width:78px;
+}
+.auth-main-btn{
+  width:100%;
+  padding:13px 16px;
+  font-size:16px;
+}
+.auth-note{
+  text-align:center;
+}
+@media (max-width: 560px){
+  .auth-tabs{grid-template-columns:1fr}
+  .auth-card{padding:16px}
+  .auth-hero{align-items:flex-start}
+  .auth-hero h1{font-size:24px}
+  .password-wrap{flex-direction:column; align-items:stretch}
+  .password-toggle{width:100%}
+}
+
+.auth-project{margin-top:4px;color:#64748b}
+.auth-main-btn:disabled, button:disabled{opacity:.65;cursor:not-allowed}
+.notice.err{background:#fff1f2;border-color:#fecdd3;color:#991b1b}

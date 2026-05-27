@@ -20,7 +20,7 @@
         <a href="personas.html">Personas</a>
         <a href="tablero.html">Tablero</a>
         <a href="settings.html">Configuración</a>
-        <a href="login.html">Login</a>
+        <a href="login.html">Ingreso</a>
         <button id="btnLogout" class="ghost" style="display:none">Salir</button>
       </div>
     </div>
@@ -31,13 +31,20 @@
       <div class="card">
         <h2>Configuración general</h2>
         <div class="small">Congregación</div>
-        <input id="congregacion" style="width:100%" placeholder="Villa Fiad" />
+        <input id="congregacion" style="width:100%" placeholder="Nombre de la congregación" />
         <div class="small" style="margin-top:10px">Viajante por defecto</div>
-        <input id="travelerName" style="width:100%" placeholder="Roberto Armando" />
+        <input id="travelerName" style="width:100%" placeholder="Nombre del viajante" />
         <div class="small" style="margin-top:10px">Horario sugerido</div>
         <input id="defaultTime" style="width:100%" placeholder="19:30" />
+        <label class="row" style="margin-top:12px">
+          <input id="enableAuxRoom" type="checkbox" checked />
+          <span>Habilitar Sala B / sala auxiliar</span>
+        </label>
+        <div class="small" style="margin-top:10px">Nombre de la sala auxiliar</div>
+        <input id="auxRoomName" style="width:100%" placeholder="Sala B" />
+        <p class="small">Al estar habilitada, la lectura bíblica y las asignaciones estudiantiles se duplican para asignar automáticamente auditorio principal y Sala B.</p>
         <div class="small" style="margin-top:10px">Fechas sin reunión (una por línea: AAAA-MM-DD | Motivo)</div>
-        <textarea id="noMeetingDates" placeholder="2026-04-02 | Conmemoración"></textarea>
+        <textarea id="noMeetingDates" placeholder="AAAA-MM-DD | Motivo"></textarea>
       </div>
 
       <div class="card">
@@ -48,7 +55,54 @@
         <input id="proxy" placeholder="https://TU-WORKER.workers.dev/?url=" style="width:100%" />
         <hr/>
         <button id="btnSaveCfg" class="success">Guardar configuración</button>
+        <button id="btnClearLocal" class="ghost" type="button">Borrar configuración local</button>
         <div id="msg" class="small" style="margin-top:8px"></div>
+      </div>
+
+
+      <div class="card">
+        <h2>Backup compatible Python ↔ Web</h2>
+        <p>Exporta o importa un archivo JSON compatible con el Planificador VMC en Python. Incluye configuración, personas, roles, semanas y asignaciones guardadas.</p>
+        <div class="row" style="gap:8px; flex-wrap:wrap">
+          <button id="btnExportCompatible" class="secondary" type="button">Exportar backup compatible</button>
+          <input id="compatibleBackupFile" type="file" accept=".json,.vmc.json,application/json" />
+        </div>
+        <label class="row" style="margin-top:10px"><input id="clearBeforeCompatibleImport" type="checkbox"> <span>Borrar datos web antes de importar</span></label>
+        <button id="btnImportCompatible" class="success" type="button" style="margin-top:10px">Importar backup compatible</button>
+        <div id="backupMsg" class="small" style="margin-top:8px"></div>
+      </div>
+
+
+      <div class="card">
+        <h2>Importación inicial</h2>
+        <p>Cargar la lista inicial de personas para la Congregación Centro desde el tablero enviado.</p>
+        <a class="btn secondary" href="importar_centro.html">Abrir importador Centro</a>
+        <p class="small">Requiere iniciar sesión. Podés limpiar personas/semanas/asignaciones anteriores antes de importar.</p>
+      </div>
+
+      <div class="card">
+        <h2>Seguridad de la cuenta</h2>
+        <p>Cambiar contraseña del usuario conectado.</p>
+        <div class="notice ok" style="margin-bottom:12px">Usuario: <b id="userEmail">—</b></div>
+        <div class="small">Contraseña actual</div>
+        <div class="password-wrap">
+          <input id="currentPassword" type="password" autocomplete="current-password" placeholder="Contraseña actual" style="width:100%" />
+          <button type="button" class="ghost password-toggle" data-toggle="currentPassword">Ver</button>
+        </div>
+        <div class="small" style="margin-top:10px">Nueva contraseña</div>
+        <div class="password-wrap">
+          <input id="newPassword" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" style="width:100%" />
+          <button type="button" class="ghost password-toggle" data-toggle="newPassword">Ver</button>
+        </div>
+        <div class="small" style="margin-top:10px">Confirmar nueva contraseña</div>
+        <div class="password-wrap">
+          <input id="newPassword2" type="password" autocomplete="new-password" placeholder="Repetir nueva contraseña" style="width:100%" />
+          <button type="button" class="ghost password-toggle" data-toggle="newPassword2">Ver</button>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button id="btnChangePassword" class="secondary" type="button">Cambiar contraseña</button>
+          <div id="secMsg" class="small"></div>
+        </div>
       </div>
     </div>
   </div>

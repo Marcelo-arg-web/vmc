@@ -20,7 +20,7 @@
         <a href="personas.html">Personas</a>
         <a href="tablero.html">Tablero</a>
         <a href="settings.html">Configuración</a>
-        <a href="login.html">Login</a>
+        <a href="login.html">Ingreso</a>
         <button id="btnLogout" class="ghost" style="display:none">Salir</button>
       </div>
     </div>
@@ -71,7 +71,7 @@
             <input id="wolLink" style="width:100%" placeholder="https://wol.jw.org/..." />
             <button id="btnAutoWOL" class="secondary" type="button">Auto</button>
           </div>
-          <div class="small" id="wolAutoHint" style="margin-top:6px">Desde abril de 2026 se puede sugerir el enlace automáticamente según la semana.</div>
+          <div class="small" id="wolAutoHint" style="margin-top:6px">El enlace se sugiere automáticamente con el patrón WOL 2026 y sus saltos entre números de guía.</div>
         </div>
         <div>
           <div class="small">Motivo / observación especial</div>
@@ -101,7 +101,7 @@
         </div>
         <div>
           <div class="small">Viajante</div>
-          <input id="travelerName" style="width:100%" placeholder="Roberto Armando" />
+          <input id="travelerName" style="width:100%" placeholder="Nombre del viajante" />
         </div>
         <div>
           <div class="small">Título del discurso del viajante</div>
@@ -109,13 +109,24 @@
         </div>
       </div>
 
+      <div class="notice" id="auxRoomAutoStatus" style="margin-top:12px">
+        <label class="row" style="margin:0">
+          <input id="auxRoomEnabled" type="checkbox" />
+          <span><b>Usar Sala B / sala auxiliar esta semana</b></span>
+        </label>
+        <div class="small" style="margin-top:6px">Al cargar WOL, se activa automáticamente si en “Seamos mejores maestros” hay un discurso. Igual podés activarla o desactivarla manualmente antes de guardar.</div>
+      </div>
+
       <div class="row" style="margin-top:12px">
         <button id="btnLoadWOL">Cargar programa desde WOL</button>
         <button id="btnSuggest" class="secondary">Sugerir asignados</button>
         <button id="btnSave" class="success">Guardar semana</button>
         <button id="btnToBoard" class="secondary">Ver tablero</button>
+        <button id="btnClearAssigned" class="ghost" type="button">Limpiar asignados</button>
+        <button id="btnDeleteWeekAssignments" class="danger" type="button">Eliminar asignados de esta semana</button>
       </div>
       <div id="msg" class="notice" style="display:none; margin-top:10px"></div>
+      <div id="saveStatus" class="notice ok" style="display:none; margin-top:10px"></div>
       <div class="small" id="status" style="margin-top:10px">—</div>
     </div>
 

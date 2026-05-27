@@ -3,7 +3,7 @@
 .board-header{display:grid; grid-template-columns: 1fr 2.2fr; align-items:end; gap:12px; border-bottom:4px solid #334155; padding-bottom:3mm; margin-bottom:5mm}
 .board-header .cong{font-weight:800; font-size:11pt; letter-spacing:.4px}
 .board-title{font-family: Georgia, "Times New Roman", serif; font-weight:700; font-size:22pt; text-align:center}
-.week-sheet{padding-bottom:5mm; margin-bottom:5mm; border-bottom:2px solid #cbd5e1; page-break-inside:avoid}
+.week-sheet{padding-bottom:5mm; margin-bottom:5mm; border-bottom:2px solid #cbd5e1; page-break-inside:avoid; break-inside:avoid}
 .week-sheet:last-child{margin-bottom:0; padding-bottom:0; border-bottom:none}
 .week-top{display:grid; grid-template-columns: 1.45fr 0.95fr; gap:16px; margin-bottom:5mm}
 .week-date{font-family: Georgia, "Times New Roman", serif; font-size:16pt; font-weight:700; margin-bottom:3mm}
@@ -24,7 +24,7 @@
 .cell-topic{width:auto; font-weight:500}
 .cell-assign{width:33%; border-left:2px solid #e2e8f0; background:#fcfcfd}
 .asg-solo{font-weight:800; min-height:18px}
-.asg-pair{display:grid; grid-template-columns: minmax(0,1fr) 20px minmax(0,1fr); gap:8px; align-items:start}
+.asg-pair{display:grid; grid-template-columns: minmax(0,1fr) 18px minmax(0,1fr); gap:8px; align-items:start}
 .asg-main,.asg-help{font-weight:800}
 .asg-num{color:#dc2626; font-weight:900; text-align:center}
 .section-hint{font-size:9.5pt; color:#475569; text-decoration:underline; margin:6px 0 2px}
@@ -32,10 +32,39 @@
 .footer-line .right{font-weight:800}
 .special-empty{padding:14px; border:1px dashed #94a3b8; border-radius:12px; background:#f8fafc; font-weight:700}
 .image-exporting #board{box-shadow:none; border:none}
+
+@page{size:A4 portrait; margin:6mm}
 @media print{
   html,body{background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+  body{margin:0}
   .topbar,.no-print{display:none !important}
-  #board{border:none; box-shadow:none; padding:0; width:auto; min-height:auto}
-  #boardWrap{display:block}
+  .container.page-wide{max-width:none; width:auto; padding:0; margin:0}
+  #boardWrap{display:block; width:198mm; margin:0 auto}
+  #board{border:none; box-shadow:none; padding:0; width:198mm; min-height:auto}
+  .board-header{grid-template-columns: .75fr 2.25fr; gap:6px; border-bottom:2px solid #334155; padding-bottom:1.5mm; margin-bottom:2mm}
+  .board-header .cong{font-size:7.7pt; letter-spacing:.15px}
+  .board-title{font-size:13.2pt; line-height:1.05}
+  #weeksContainer{display:grid; grid-template-rows:auto auto; gap:2mm}
+  .week-sheet{padding:0 0 1.2mm; margin:0; border-bottom:1px solid #cbd5e1; page-break-inside:avoid; break-inside:avoid}
+  .week-sheet:last-child{border-bottom:none; padding-bottom:0}
+  .week-top{grid-template-columns:1.55fr .9fr; gap:6px; margin-bottom:1.4mm}
+  .week-date{font-size:10.7pt; margin-bottom:.7mm; line-height:1.05}
+  .week-reading{font-size:7.6pt; line-height:1.05; letter-spacing:0}
+  .side-grid{font-size:7.4pt; gap:2px 4px; line-height:1.05}
+  .side-grid .value{min-height:10px; border-bottom:.5px solid #94a3b8}
+  .section-band{margin:1mm 0 0; padding:2px 6px; font-size:7.7pt; line-height:1.05; letter-spacing:0}
+  .section-hint{font-size:6.8pt; margin:1px 0 0; line-height:1.05; text-decoration:none}
+  .program-table{table-layout:fixed}
+  .program-table td{padding:1.55px 3px; font-size:6.85pt; line-height:1.03; border-bottom:.5px solid #e2e8f0}
+  .cell-time{width:12mm; font-size:6.45pt; white-space:nowrap}
+  .cell-bullet{width:4.5mm; font-size:7.2pt}
+  .cell-bullet.is-number{font-size:7pt}
+  .cell-topic{font-weight:500; word-break:break-word}
+  .cell-assign{width:36%; border-left:1px solid #e2e8f0; background:#fcfcfd}
+  .asg-solo{min-height:8px; font-weight:800}
+  .asg-pair{grid-template-columns:minmax(0,1fr) 9px minmax(0,1fr); gap:2px}
+  .asg-main,.asg-help,.asg-num{line-height:1.03}
+  .footer-line{font-size:7.2pt; margin-top:1px; line-height:1.05}
+  .special-empty{padding:6px; border-radius:6px; font-size:8pt}
   .section-band,.cell-assign{ -webkit-print-color-adjust:exact; print-color-adjust:exact }
 }

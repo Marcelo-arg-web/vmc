@@ -3,11 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Login — Planificador VMC</title>
+  <title>Ingreso — Planificador VMC</title>
   <link rel="stylesheet" href="css/styles.css" />
-  
 </head>
-<body>
+<body class="auth-page">
   <div class="topbar">
     <div class="container nav">
       <div class="brand">
@@ -21,37 +20,83 @@
         <a href="personas.html">Personas</a>
         <a href="tablero.html">Tablero</a>
         <a href="settings.html">Configuración</a>
-        <a href="login.html">Login</a>
+        <a href="login.html">Ingreso</a>
         <button id="btnLogout" class="ghost" style="display:none">Salir</button>
       </div>
     </div>
   </div>
 
-  <div class="container">
-    
-<div class="card">
-  <h2>Login</h2>
-  <p>Iniciá sesión con un usuario creado en Firebase Authentication (Email/Password).</p>
-  <div class="grid cols-2">
-    <div>
-      <div class="small">Email</div>
-      <input id="email" type="email" placeholder="tu@email.com" style="width:100%" />
-    </div>
-    <div>
-      <div class="small">Contraseña</div>
-      <input id="password" type="password" placeholder="••••••••" style="width:100%" />
-    </div>
-  </div>
-  <div class="row" style="margin-top:10px">
-    <button id="btnLogin">Entrar</button>
-    <div id="msg" class="small" style="color:#dc2626"></div>
-  </div>
-</div>
+  <main class="container auth-shell">
+    <section class="auth-card card">
+      <div class="auth-hero">
+        <div class="auth-icon">🔐</div>
+        <div>
+          <h1>Ingreso seguro</h1>
+          <p>Entrá con tu correo y contraseña. Nadie puede usar la app sin iniciar sesión.</p><div class="small auth-project">Proyecto Firebase: <b id="firebaseProjectId">—</b></div>
+        </div>
+      </div>
 
-    <footer>
-      <div>Consejo: guardá la semana antes de pasar a otra. Si ves “No guardado”, no cambies de semana hasta guardar.</div>
-    </footer>
-  </div>
+      <div class="auth-tabs" role="tablist" aria-label="Opciones de ingreso">
+        <button type="button" class="auth-tab active" data-panel="loginPanel">Ingresar</button>
+        <button type="button" class="auth-tab ghost" data-panel="registerPanel">Crear usuario</button>
+        <button type="button" class="auth-tab ghost" data-panel="resetPanel">Recuperar</button>
+      </div>
+
+      <form id="loginPanel" class="auth-panel">
+        <label class="field-block">
+          <span>Correo electrónico</span>
+          <input id="loginEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com" required />
+        </label>
+        <label class="field-block">
+          <span>Contraseña</span>
+          <div class="password-wrap">
+            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Contraseña" required />
+            <button type="button" class="ghost password-toggle" data-toggle="loginPassword">Ver</button>
+          </div>
+        </label>
+        <button id="btnLogin" class="auth-main-btn" type="submit">Entrar</button>
+        <div class="small auth-note">Si olvidaste la contraseña, usá la pestaña <b>Recuperar</b>.</div>
+      </form>
+
+      <form id="registerPanel" class="auth-panel" hidden>
+        <label class="field-block">
+          <span>Correo del nuevo usuario</span>
+          <input id="registerEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com" required />
+        </label>
+        <label class="field-block">
+          <span>Contraseña</span>
+          <div class="password-wrap">
+            <input id="registerPassword" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required minlength="6" />
+            <button type="button" class="ghost password-toggle" data-toggle="registerPassword">Ver</button>
+          </div>
+        </label>
+        <label class="field-block">
+          <span>Confirmar contraseña</span>
+          <div class="password-wrap">
+            <input id="registerPassword2" type="password" autocomplete="new-password" placeholder="Repetir contraseña" required minlength="6" />
+            <button type="button" class="ghost password-toggle" data-toggle="registerPassword2">Ver</button>
+          </div>
+        </label>
+        <button id="btnRegister" class="auth-main-btn success" type="submit">Crear usuario</button>
+        <div class="small auth-note">Al crear el usuario, la sesión se abre automáticamente.</div>
+      </form>
+
+      <form id="resetPanel" class="auth-panel" hidden>
+        <label class="field-block">
+          <span>Correo electrónico</span>
+          <input id="resetEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com" required />
+        </label>
+        <button id="btnReset" class="auth-main-btn secondary" type="submit">Enviar enlace para recuperar</button>
+        <div class="small auth-note">Firebase enviará un correo para cambiar la contraseña.</div>
+      </form>
+
+      <div id="msg" class="notice" style="display:none;margin-top:12px"></div>
+      <div class="row" style="justify-content:center;margin-top:12px">
+        <button id="btnClearLocalLogin" class="ghost" type="button">Borrar configuración local</button>
+        <button id="btnReloadLogin" class="ghost" type="button">Recargar ingreso</button>
+      </div>
+    </section>
+  </main>
 
   <script type="module" src="js/login.js"></script>
 </body>

@@ -1,18 +1,41 @@
-import { APP, Storage, qs, setActiveNav } from "./app.js";
-import { watchAuth, logout } from "./firebase.js";
+import { APP, qs, qsa, setActiveNav } from "./app.js";
+import { watchAuth, logout, requireSignedIn } from "./firebase.js";
+
+function currentPage(){
+  return location.pathname.split("/").pop() || "index.html";
+}
+
+function showLoggedOutNavigation(isLoggedIn){
+  qsa(".navlinks a").forEach(a=>{
+    const href = a.getAttribute("href") || "";
+    if(!isLoggedIn && href !== "login.html") a.style.display = "none";
+    else a.style.display = "inline-flex";
+  });
+}
 
 export function mountHeader(){
-  qs("#appName").textContent = APP.name;
-  qs("#appVersion").textContent = "v"+APP.version;
-  setActiveNav(location.pathname.split("/").pop() || "index.html");
+  const appName = qs("#appName");
+  const appVersion = qs("#appVersion");
+  if(appName) appName.textContent = APP.name;
+  if(appVersion) appVersion.textContent = "v"+APP.version;
+  setActiveNav(currentPage());
 
   const statusEl = qs("#authStatus");
   const logoutBtn = qs("#btnLogout");
+  const page = currentPage();
+  const isLoginPage = page === "login.html";
+
   if(statusEl){
     try{
       watchAuth(u=>{
-        statusEl.textContent = u ? ("Conectado: "+ (u.email||"")) : "No conectado";
-        if(logoutBtn) logoutBtn.style.display = u ? "inline-flex" : "none";
+        const logged = !!u;
+        statusEl.textContent = logged ? ("Conectado: "+ (u.email||"")) : "No conectado";
+        if(logoutBtn) logoutBtn.style.display = logged ? "inline-flex" : "none";
+        showLoggedOutNavigation(logged);
+        if(!logged && !isLoginPage){
+          const next = encodeURIComponent(page + (location.search || "") + (location.hash || ""));
+          location.replace(`login.html?next=${next}`);
+        }
       });
     }catch(e){
       statusEl.textContent = "Configurar Firebase";
@@ -26,13 +49,6 @@ export function mountHeader(){
   }
 }
 
-export function requireAuthOrRedirect(){
-  // If no firebase config => go settings
-  const cfg = Storage.get("firebaseConfig", null);
-  if(!cfg){
-    location.href="settings.html";
-    return;
-  }
-  // Auth state is async; we do a quick check by reading cached firebase user? Not available; simplest:
-  // pages that require auth will have a link and user will go through login if needed.
+export async function requireAuthOrRedirect(){
+  return requireSignedIn(true);
 }

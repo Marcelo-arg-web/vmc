@@ -1,8 +1,9 @@
 import { qs, qsa, debounce, normalizeName } from "./app.js";
-import { mountHeader } from "./ui_common.js";
+import { mountHeader, requireAuthOrRedirect } from "./ui_common.js";
 import { loadPeople, savePerson, deletePerson } from "./data.js";
 
 mountHeader();
+await requireAuthOrRedirect();
 
 let people = [];
 let filtered = [];

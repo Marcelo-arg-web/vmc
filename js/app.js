@@ -1,17 +1,24 @@
 export const APP = {
   name: "Planificador VMC",
-  version: "2.2.0"
+  version: "2.3.13",
+  storagePrefix: "vmc_rvmc_c28b6_"
 };
 
 export const Storage = {
+  k(key){ return APP.storagePrefix + key; },
   get(key, fallback=null){
     try{
-      const v = localStorage.getItem(key);
+      const v = localStorage.getItem(this.k(key));
       return v ? JSON.parse(v) : fallback;
     }catch(e){ return fallback; }
   },
-  set(key, value){ localStorage.setItem(key, JSON.stringify(value)); },
-  del(key){ localStorage.removeItem(key); }
+  set(key, value){ localStorage.setItem(this.k(key), JSON.stringify(value)); },
+  del(key){ localStorage.removeItem(this.k(key)); },
+  clearApp(){
+    Object.keys(localStorage).forEach(k=>{
+      if(k.startsWith(APP.storagePrefix)) localStorage.removeItem(k);
+    });
+  }
 };
 
 export function qs(sel, root=document){ return root.querySelector(sel); }
@@ -59,6 +66,20 @@ export function addDaysISO(iso, days){
   d.setDate(d.getDate() + days);
   const tz = new Date(d.getTime() - d.getTimezoneOffset()*60000);
   return tz.toISOString().slice(0,10);
+}
+
+export function weekStartISO(iso){
+  const d = parseISO(iso);
+  if(!d || isNaN(d)) return iso || "";
+  const jsDay = d.getDay();
+  const mondayBased = (jsDay + 6) % 7;
+  d.setDate(d.getDate() - mondayBased);
+  const tz = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return tz.toISOString().slice(0,10);
+}
+
+export function sameMeetingWeek(aISO, bISO){
+  return !!aISO && !!bISO && weekStartISO(aISO) === weekStartISO(bISO);
 }
 
 export function monthWeekOptions(iso){

@@ -1,7 +1,8 @@
 import { qs, Storage, todayISO } from "./app.js";
-import { mountHeader } from "./ui_common.js";
+import { mountHeader, requireAuthOrRedirect } from "./ui_common.js";
 
 mountHeader();
+await requireAuthOrRedirect();
 
 const ctrlEl = qs("#controlBox");
 function renderControl(){
